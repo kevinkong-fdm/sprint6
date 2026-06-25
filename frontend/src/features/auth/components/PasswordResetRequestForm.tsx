@@ -8,16 +8,21 @@ export function PasswordResetRequestForm() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
+    setMessage("");
     setError("");
+    setIsSubmitting(true);
     try {
       const response = await requestPasswordReset({ email });
       setMessage(response.message);
     } catch (err) {
       const mapped = mapApiError(err);
       setError(mapped.message);
+    } finally {
+      setIsSubmitting(false);
     }
   }
 
@@ -48,9 +53,10 @@ export function PasswordResetRequestForm() {
 
         <button
           type="submit"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/60"
+          disabled={isSubmitting}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
         >
-          Request reset
+          {isSubmitting ? "Requesting..." : "Request reset"}
         </button>
       </form>
 

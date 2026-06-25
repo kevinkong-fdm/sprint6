@@ -24,15 +24,6 @@ const actions = [
 export function HomePage() {
   return (
     <section className="space-y-6">
-      <article className="animate-fade-up rounded-3xl border border-white/15 bg-gradient-to-br from-slate-900/80 via-slate-800/60 to-cyan-900/30 p-6 shadow-soft backdrop-blur-xl sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Overview</p>
-        <h2 className="mt-2 text-3xl font-semibold text-white sm:text-4xl">Secure account access workflows</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200/85 sm:text-base">
-          Choose a workflow below to move through authentication tasks quickly. Every page is connected
-          through navigation so operations can be completed without manually editing URL paths.
-        </p>
-      </article>
-
       <div className="grid gap-4 md:grid-cols-3">
         {actions.map((action) => (
           <article
