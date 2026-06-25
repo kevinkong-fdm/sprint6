@@ -1,0 +1,321 @@
+openapi: 3.1.0
+info:
+  title: Digital Banking Authentication API
+  version: 1.0.0
+  summary: Registration, login, reset request, and token refresh
+  description: |
+    Contract-first API for authentication foundation in v1.
+    Scope constraints:
+    - Login identifier is email only.
+    - MFA is out of scope in v1.
+    - Access token TTL is 60 minutes.
+    - Refresh token TTL is 30 days with rotation.
+    - Lockout after 10 failed login attempts for 15 minutes.
+    - Password reset request throttle is 5 requests per hour per account email.
+    - Password reset link validity is 30 minutes.
+servers:
+  - url: https://api.example.com
+    description: Production
+  - url: https://api.sandbox.example.com
+    description: Sandbox
+x-auth-policy:
+  login_identifier: email
+  mfa: not-supported-v1
+  access_token_ttl_minutes: 60
+  refresh_token_ttl_days: 30
+  login_lockout:
+    failed_attempts: 10
+    lockout_minutes: 15
+  password_reset:
+    max_requests_per_hour_per_email: 5
+    link_expiry_minutes: 30
+paths:
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register customer account
+      operationId: registerCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+        '400':
+          description: Registration validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidRegistration:
+                  value:
+                    errorCode: AUTH-REG-001
+                    message: Registration validation failed.
+                    correlationId: 95a6c2be-4a0c-4972-95a0-21b10a2139f4
+                    timestamp: '2026-06-25T12:00:00Z'
+        '409':
+          description: Duplicate account email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateEmail:
+                  value:
+                    errorCode: AUTH-REG-002
+                    message: Duplicate account identifier.
+                    correlationId: a9dff03a-ae93-4f2a-a616-aac49240a6ce
+                    timestamp: '2026-06-25T12:00:00Z'
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Authenticate customer
+      description: |
+        Authenticates with email and password only.
+        MFA challenge fields are not supported in v1.
+      operationId: loginCustomer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidCredentials:
+                  value:
+                    errorCode: AUTH-LOGIN-001
+                    message: Invalid credentials.
+                    correlationId: 33c4f59e-2a4e-4a0f-9ec8-e414d14c7b4e
+                    timestamp: '2026-06-25T12:00:00Z'
+        '423':
+          description: Account locked after failed attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountLocked:
+                  value:
+                    errorCode: AUTH-LOGIN-002
+                    message: Account temporarily locked.
+                    correlationId: 4b5f39cd-f648-4292-9c6b-c6a8d49ce0d7
+                    timestamp: '2026-06-25T12:00:00Z'
+  /auth/password-reset/request:
+    post:
+      tags: [Authentication]
+      summary: Request password reset
+      description: |
+        Response semantics are non-disclosing for account existence.
+        A successful outward response does not confirm whether the email exists.
+      operationId: requestPasswordReset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetRequest'
+      responses:
+        '202':
+          description: Request accepted (neutral response)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AcceptedResponse'
+              examples:
+                accepted:
+                  value:
+                    message: If the account exists, reset instructions will be sent.
+                    correlationId: 8219f603-aed2-4e95-bfca-7f385af8f2fb
+        '429':
+          description: Reset request throttled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                throttled:
+                  value:
+                    errorCode: AUTH-RESET-002
+                    message: Password reset request throttled.
+                    correlationId: de4f446f-3666-45d6-a4e8-4de03bbec955
+                    timestamp: '2026-06-25T12:00:00Z'
+  /auth/token/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh session tokens
+      operationId: refreshSessionToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+      responses:
+        '200':
+          description: New token set issued and prior refresh token invalidated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokenResponse'
+        '401':
+          description: Invalid, expired, revoked, or reused refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidOrExpired:
+                  value:
+                    errorCode: AUTH-TOKEN-001
+                    message: Invalid or expired refresh token.
+                    correlationId: 7dbd9d6f-f88d-4fd6-ad08-4f2db02c2a75
+                    timestamp: '2026-06-25T12:00:00Z'
+                tokenReuse:
+                  value:
+                    errorCode: AUTH-TOKEN-002
+                    message: Refresh token reuse detected.
+                    correlationId: 75a7f3e1-120f-44ad-bb8d-95fdca8d86bc
+                    timestamp: '2026-06-25T12:00:00Z'
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 12
+          maxLength: 128
+          description: Plaintext input; never logged or stored.
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 128
+    PasswordResetRequest:
+      type: object
+      additionalProperties: false
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+    TokenRefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 32
+          maxLength: 4096
+    RegisterResponse:
+      type: object
+      additionalProperties: false
+      required: [userId, email, createdAt]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+    AuthTokenResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - tokenType
+        - accessToken
+        - refreshToken
+        - accessTokenExpiresInSeconds
+        - refreshTokenExpiresInSeconds
+      properties:
+        tokenType:
+          type: string
+          const: Bearer
+        accessToken:
+          type: string
+          minLength: 20
+        refreshToken:
+          type: string
+          minLength: 32
+        accessTokenExpiresInSeconds:
+          type: integer
+          const: 3600
+        refreshTokenExpiresInSeconds:
+          type: integer
+          const: 2592000
+    AcceptedResponse:
+      type: object
+      additionalProperties: false
+      required: [message, correlationId]
+      properties:
+        message:
+          type: string
+          minLength: 1
+        correlationId:
+          type: string
+          format: uuid
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required: [errorCode, message, correlationId, timestamp]
+      properties:
+        errorCode:
+          type: string
+          enum:
+            - AUTH-REG-001
+            - AUTH-REG-002
+            - AUTH-LOGIN-001
+            - AUTH-LOGIN-002
+            - AUTH-RESET-002
+            - AUTH-TOKEN-001
+            - AUTH-TOKEN-002
+            - AUTH-SESSION-001
+        message:
+          type: string
+          minLength: 1
+        correlationId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
