@@ -1,0 +1,9 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/banking?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:Castleclash123!}
+
+security:
+  jwt:
+    secret: ${JWT_SECRET:change-me-local-secret-change-me-local-secret}

@@ -1,0 +1,27 @@
+# VCS
+.git/
+.gitignore
+
+# Node and frontend artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Java build artifacts
+backend/target/
+*.class
+*.jar
+*.war
+
+# Runtime outputs
+*.log
+coverage/
+
+# Environment
+.env*
+
+# Docker metadata
+Dockerfile*
+.dockerignore

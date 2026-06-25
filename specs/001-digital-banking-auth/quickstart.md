@@ -14,28 +14,39 @@ This guide validates the feature end-to-end against:
 
 ## Setup
 
-1. Create and configure the MySQL database.
+1. Provision MySQL (host install or Docker).
+
+Host install option:
+- Ensure MySQL 8.x is running locally.
+
+Docker option:
+
+```bash
+docker compose up -d mysql
+```
+
+2. Create and configure the MySQL database.
 
 ```sql
 CREATE DATABASE banking_auth;
 ```
 
-2. Configure backend environment (example in `backend/src/main/resources/application-local.yml`).
+3. Configure backend environment (example in `backend/src/main/resources/application-local.yml`).
 
 Required values:
 - MySQL JDBC URL
 - DB username and password
 - JWT signing/verification keys
 
-3. Run backend migrations and start Spring Boot API.
+4. Run backend migrations and start Spring Boot API.
 
 ```bash
 cd backend
-./mvnw flyway:migrate
-./mvnw spring-boot:run
+mvn flyway:migrate
+mvn spring-boot:run
 ```
 
-4. Install frontend dependencies and generate typed API client from OpenAPI.
+5. Install frontend dependencies and generate typed API client from OpenAPI.
 
 ```bash
 cd ../frontend
@@ -43,7 +54,7 @@ npm ci
 npm run generate:api
 ```
 
-5. Start React client.
+6. Start React client.
 
 ```bash
 npm run dev
@@ -120,8 +131,8 @@ Run backend and frontend quality gates:
 
 ```bash
 cd backend
-./mvnw test
-./mvnw verify -Pcontract
+mvn test
+mvn verify -Pcontract
 
 cd ../frontend
 npm run test
