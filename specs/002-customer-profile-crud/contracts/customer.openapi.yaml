@@ -1,0 +1,420 @@
+openapi: 3.1.0
+info:
+  title: Customer Profile Lifecycle API
+  version: 1.0.0
+  description: >-
+    Contract for customer profile create/get/update/delete operations in the
+    digital banking platform.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+paths:
+  /customers:
+    post:
+      summary: Create customer profile
+      operationId: createCustomer
+      tags: [Customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerCreateRequest'
+      responses:
+        '201':
+          description: Customer created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validation:
+                  value:
+                    errorCode: CUST-CRT-001
+                    message: Customer creation validation failed.
+                    correlationId: corr-123
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    errorCode: CUST-AUTH-001
+                    message: Caller not authorized for customer lifecycle action.
+                    correlationId: corr-123
+        '409':
+          description: Duplicate identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicate:
+                  value:
+                    errorCode: CUST-CRT-002
+                    message: Duplicate customer identity attribute.
+                    correlationId: corr-123
+
+  /customers/{customerId}:
+    parameters:
+      - in: path
+        name: customerId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get customer details
+      operationId: getCustomer
+      tags: [Customers]
+      responses:
+        '200':
+          description: Customer found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    errorCode: CUST-AUTH-001
+                    message: Caller not authorized for customer lifecycle action.
+                    correlationId: corr-123
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: CUST-GET-001
+                    message: Customer not found.
+                    correlationId: corr-123
+
+    patch:
+      summary: Update customer profile
+      operationId: updateCustomer
+      tags: [Customers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdateRequest'
+      responses:
+        '200':
+          description: Customer updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerResponse'
+        '400':
+          description: Update validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                updateValidation:
+                  value:
+                    errorCode: CUST-UPD-001
+                    message: Customer update validation failed.
+                    correlationId: corr-123
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    errorCode: CUST-AUTH-001
+                    message: Caller not authorized for customer lifecycle action.
+                    correlationId: corr-123
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: CUST-GET-001
+                    message: Customer not found.
+                    correlationId: corr-123
+        '422':
+          description: Immutable field update attempted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                immutableField:
+                  value:
+                    errorCode: CUST-UPD-003
+                    message: Immutable customer field update attempted.
+                    correlationId: corr-123
+
+    delete:
+      summary: Hard delete customer profile
+      operationId: deleteCustomer
+      tags: [Customers]
+      responses:
+        '204':
+          description: Customer and dependent records deleted
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unauthorized:
+                  value:
+                    errorCode: CUST-AUTH-001
+                    message: Caller not authorized for customer lifecycle action.
+                    correlationId: corr-123
+        '404':
+          description: Customer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: CUST-DEL-001
+                    message: Customer not found for delete operation.
+                    correlationId: corr-123
+        '409':
+          description: Cascading dependency deletion failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                cascadeFailure:
+                  value:
+                    errorCode: CUST-DEL-002
+                    message: Customer hard delete failed due to cascading dependency deletion error.
+                    correlationId: corr-123
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CustomerCreateRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - email
+        - givenName
+        - familyName
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        givenName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        familyName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phoneNumber:
+          type: string
+          maxLength: 30
+        dateOfBirth:
+          type: string
+          format: date
+        preferredLanguage:
+          type: string
+          maxLength: 20
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressInput'
+        contactPreferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPreferenceInput'
+
+    CustomerUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        givenName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        familyName:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phoneNumber:
+          type: string
+          maxLength: 30
+        preferredLanguage:
+          type: string
+          maxLength: 20
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressInput'
+        contactPreferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPreferenceInput'
+
+    CustomerResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - customerId
+        - email
+        - givenName
+        - familyName
+        - createdAt
+        - updatedAt
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        givenName:
+          type: string
+        familyName:
+          type: string
+        phoneNumber:
+          type: string
+        dateOfBirth:
+          type: string
+          format: date
+        preferredLanguage:
+          type: string
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddressOutput'
+        contactPreferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContactPreferenceOutput'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AddressInput:
+      type: object
+      additionalProperties: false
+      required:
+        - addressType
+        - line1
+        - city
+        - postalCode
+        - countryCode
+      properties:
+        addressType:
+          type: string
+          enum: [HOME, MAILING, WORK]
+        line1:
+          type: string
+          maxLength: 200
+        line2:
+          type: string
+          maxLength: 200
+        city:
+          type: string
+          maxLength: 100
+        region:
+          type: string
+          maxLength: 100
+        postalCode:
+          type: string
+          maxLength: 20
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+
+    AddressOutput:
+      allOf:
+        - $ref: '#/components/schemas/AddressInput'
+        - type: object
+          additionalProperties: false
+          required:
+            - addressId
+          properties:
+            addressId:
+              type: string
+              format: uuid
+
+    ContactPreferenceInput:
+      type: object
+      additionalProperties: false
+      required:
+        - channel
+        - optIn
+      properties:
+        channel:
+          type: string
+          enum: [EMAIL, SMS, PUSH]
+        optIn:
+          type: boolean
+
+    ContactPreferenceOutput:
+      allOf:
+        - $ref: '#/components/schemas/ContactPreferenceInput'
+        - type: object
+          additionalProperties: false
+          required:
+            - preferenceId
+          properties:
+            preferenceId:
+              type: string
+              format: uuid
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - errorCode
+        - message
+        - correlationId
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string

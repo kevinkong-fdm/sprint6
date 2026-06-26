@@ -133,8 +133,11 @@
                         <artifactId>maven-surefire-plugin</artifactId>
                         <configuration>
                             <includes>
+                                <include>**/auth/contract/*ContractTest.java</include>
+                                <include>**/customer/contract/*ContractTest.java</include>
                                 <include>**/*ContractTest.java</include>
                             </includes>
+                            <failIfNoTests>false</failIfNoTests>
                         </configuration>
                     </plugin>
                 </plugins>

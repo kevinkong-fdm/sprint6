@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
+import { useAuthSession } from "../session/AuthSessionContext";
 
-const actions = [
+const guestActions = [
   {
     title: "Sign in",
     description: "Use your credentials to access active sessions and account controls.",
@@ -22,10 +23,23 @@ const actions = [
 ];
 
 export function HomePage() {
+  const { isAuthenticated } = useAuthSession();
+
+  const visibleActions = isAuthenticated
+    ? [
+        {
+          title: "Customers",
+          description: "Open the authenticated customer workspace and run create, retrieve, update, and delete operations.",
+          to: "/customers",
+          cta: "Open customers",
+        },
+      ]
+    : guestActions;
+
   return (
     <section className="space-y-6">
       <div className="grid gap-4 md:grid-cols-3">
-        {actions.map((action) => (
+        {visibleActions.map((action) => (
           <article
             key={action.to}
             className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl"

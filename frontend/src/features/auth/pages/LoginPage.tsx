@@ -1,14 +1,27 @@
-import { FormEvent, useState } from "react";
-import { Link, useInRouterContext } from "react-router-dom";
+import { FormEvent, useEffect, useState } from "react";
+import { Link, useInRouterContext, useLocation, useNavigate } from "react-router-dom";
 import { login } from "../api/login";
 import { mapApiError } from "../api/errorMapper";
+import { useAuthSession } from "../session/AuthSessionContext";
 
 export function LoginPage() {
   const hasRouterContext = useInRouterContext();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { signIn, isAuthenticated } = useAuthSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const redirectState = location.state as { from?: string } | null;
+    navigate(redirectState?.from ?? "/customers", { replace: true });
+  }, [isAuthenticated, location.state, navigate]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -17,7 +30,14 @@ export function LoginPage() {
 
     try {
       const response = await login({ email, password });
+      signIn({
+        ...response,
+        email,
+      });
       setMessage(`Authenticated. Access token expires in ${response.accessTokenExpiresInSeconds} seconds.`);
+
+      const redirectState = location.state as { from?: string } | null;
+      navigate(redirectState?.from ?? "/customers", { replace: true });
     } catch (err) {
       const mapped = mapApiError(err);
       setError(mapped.message);

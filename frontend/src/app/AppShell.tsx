@@ -1,13 +1,28 @@
-import { NavLink, Outlet } from "react-router-dom";
-
-const navigationItems = [
-  { to: "/", label: "Overview" },
-  { to: "/login", label: "Login" },
-  { to: "/register", label: "Register" },
-  { to: "/password-reset", label: "Reset password" },
-];
+import { useMemo } from "react";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuthSession } from "../features/auth/session/AuthSessionContext";
 
 export function AppShell() {
+  const navigate = useNavigate();
+  const { isAuthenticated, session, signOut } = useAuthSession();
+
+  const navigationItems = useMemo(() => {
+    const items = [{ to: "/", label: "Overview" }];
+    if (isAuthenticated) {
+      items.push({ to: "/customers", label: "Customers" });
+    } else {
+      items.push({ to: "/login", label: "Login" });
+      items.push({ to: "/register", label: "Register" });
+      items.push({ to: "/password-reset", label: "Reset password" });
+    }
+    return items;
+  }, [isAuthenticated]);
+
+  function handleSignOut() {
+    signOut();
+    navigate("/login");
+  }
+
   return (
     <div className="relative min-h-screen overflow-hidden">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -27,28 +42,45 @@ export function AppShell() {
                 Console
               </h1>
               <p className="mt-1 max-w-2xl text-sm text-slate-200/80">
-                Manage sign in, registration, and account recovery from one secure workspace.
+                Manage sign in, account recovery, and authenticated customer operations from one secure workspace.
               </p>
+              {isAuthenticated ? (
+                <p className="mt-2 text-xs font-medium text-cyan-200/80">
+                  Signed in as {session?.email ?? "operator"}
+                </p>
+              ) : null}
             </div>
 
-            <nav aria-label="Primary" className="flex flex-wrap gap-2">
-              {navigationItems.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    [
-                      "rounded-full px-4 py-2 text-sm font-semibold transition duration-200",
-                      isActive
-                        ? "bg-cyan-300 text-slate-950"
-                        : "bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white",
-                    ].join(" ")
-                  }
+            <div className="flex flex-wrap items-center gap-2">
+              <nav aria-label="Primary" className="flex flex-wrap gap-2">
+                {navigationItems.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    className={({ isActive }) =>
+                      [
+                        "rounded-full px-4 py-2 text-sm font-semibold transition duration-200",
+                        isActive
+                          ? "bg-cyan-300 text-slate-950"
+                          : "bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white",
+                      ].join(" ")
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
+
+              {isAuthenticated ? (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="rounded-full bg-rose-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-rose-200"
                 >
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
+                  Logout
+                </button>
+              ) : null}
+            </div>
           </div>
         </header>
 

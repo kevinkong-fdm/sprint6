@@ -4,6 +4,8 @@ import { RegisterPage } from "../features/auth/pages/RegisterPage";
 import { LoginPage } from "../features/auth/pages/LoginPage";
 import { HomePage } from "../features/auth/pages/HomePage";
 import { PasswordResetRequestPage } from "../features/auth/pages/PasswordResetRequestPage";
+import { CustomersPage } from "../features/customer/pages/CustomersPage";
+import { RequireAuth } from "./RequireAuth";
 
 export function AppRoutes() {
   return (
@@ -13,6 +15,7 @@ export function AppRoutes() {
         <Route path="register" element={<RegisterPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="password-reset" element={<PasswordResetRequestPage />} />
+        <Route path="customers" element={<RequireAuth><CustomersPage /></RequireAuth>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

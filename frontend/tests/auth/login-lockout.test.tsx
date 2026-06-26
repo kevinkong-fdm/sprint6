@@ -2,6 +2,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { LoginPage } from "../../src/features/auth/pages/LoginPage";
 import { vi, afterEach, describe, it, expect } from "vitest";
+import { AuthSessionProvider } from "../../src/features/auth/session/AuthSessionContext";
+import { MemoryRouter } from "react-router-dom";
 
 describe("login lockout", () => {
   afterEach(() => {
@@ -15,7 +17,13 @@ describe("login lockout", () => {
       json: async () => ({ errorCode: "AUTH-LOGIN-002" }),
     } as Response);
 
-    render(<LoginPage />);
+    render(
+      <AuthSessionProvider>
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      </AuthSessionProvider>,
+    );
 
     await userEvent.type(screen.getByLabelText("Login email"), "alice@example.com");
     await userEvent.type(screen.getByLabelText("Login password"), "badpass");
