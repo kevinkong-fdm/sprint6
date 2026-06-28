@@ -33,6 +33,28 @@ public class CreateCustomerService {
 
     @Transactional
     public CustomerResponse create(CustomerCreateRequest request, String correlationId, String actorId) {
+        return createInternal(null, request, correlationId, actorId);
+    }
+
+    @Transactional
+    public CustomerResponse createWithCustomerId(
+            String customerId,
+            CustomerCreateRequest request,
+            String correlationId,
+            String actorId
+    ) {
+        if (customerId == null || customerId.isBlank()) {
+            throw new CustomerDomainException.CreateValidationException("Customer creation validation failed.");
+        }
+        return createInternal(customerId.trim(), request, correlationId, actorId);
+    }
+
+    private CustomerResponse createInternal(
+            String customerId,
+            CustomerCreateRequest request,
+            String correlationId,
+            String actorId
+    ) {
         String normalizedEmail = CustomerEmailNormalizer.normalize(request.email());
         if (normalizedEmail.isBlank()) {
             throw new CustomerDomainException.CreateValidationException("Customer creation validation failed.");
@@ -43,7 +65,8 @@ public class CreateCustomerService {
         }
 
         try {
-            CustomerProfileEntity profile = CustomerProfileEntity.newProfile(
+            CustomerProfileEntity profile = CustomerProfileEntity.newProfileWithId(
+                    customerId,
                     request.email(),
                     normalizedEmail,
                     request.givenName(),
@@ -85,7 +108,7 @@ public class CreateCustomerService {
             return customerResponseMapper.toResponse(saved);
         } catch (DataIntegrityViolationException ex) {
             customerLifecycleEventService.recordFailure(
-                    null,
+                    customerId,
                     LifecycleAction.CREATE,
                     effectiveActor(actorId),
                     correlationId,

@@ -70,6 +70,6 @@ public class RefreshTokenService {
         );
 
         tokenSecurityEventService.refreshed(user.getId(), correlationId);
-        return AuthTokenResponse.from(tokenPair);
+        return AuthTokenResponse.from(tokenPair, user.getId());
     }
 }

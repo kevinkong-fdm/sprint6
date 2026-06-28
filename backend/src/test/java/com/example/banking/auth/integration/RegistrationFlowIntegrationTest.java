@@ -23,7 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = AuthRegistrationController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, AuthRegistrationController.class})
 class RegistrationFlowIntegrationTest {
 
     @Autowired

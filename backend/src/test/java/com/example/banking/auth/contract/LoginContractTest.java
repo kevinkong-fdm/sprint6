@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = AuthLoginController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, AuthLoginController.class})
 class LoginContractTest {
 
     @Autowired
@@ -34,7 +34,7 @@ class LoginContractTest {
     @Test
     void shouldAuthenticate() throws Exception {
         when(loginService.login(any(), any()))
-                .thenReturn(new AuthTokenResponse("Bearer", "access", "refresh", 3600, 2_592_000));
+                                .thenReturn(new AuthTokenResponse("Bearer", "access", "refresh", 3600, 2_592_000, "user-1"));
 
         mockMvc.perform(post("/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

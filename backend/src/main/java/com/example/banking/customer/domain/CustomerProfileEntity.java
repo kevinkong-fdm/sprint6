@@ -69,9 +69,32 @@ public class CustomerProfileEntity {
             String preferredLanguage,
             String actorId
     ) {
+        return newProfileWithId(
+                null,
+                email,
+                emailNormalized,
+                givenName,
+                familyName,
+                phoneNumber,
+                dateOfBirth,
+                preferredLanguage,
+                actorId);
+    }
+
+    public static CustomerProfileEntity newProfileWithId(
+            String customerId,
+            String email,
+            String emailNormalized,
+            String givenName,
+            String familyName,
+            String phoneNumber,
+            LocalDate dateOfBirth,
+            String preferredLanguage,
+            String actorId
+    ) {
         Instant now = Instant.now();
         CustomerProfileEntity entity = new CustomerProfileEntity();
-        entity.customerId = UUID.randomUUID().toString();
+        entity.customerId = normalizeCustomerId(customerId);
         entity.email = normalizeRequired(email);
         entity.emailNormalized = normalizeRequired(emailNormalized);
         entity.givenName = normalizeRequired(givenName);
@@ -217,5 +240,14 @@ public class CustomerProfileEntity {
         }
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private static String normalizeCustomerId(String customerId) {
+        if (customerId == null) {
+            return UUID.randomUUID().toString();
+        }
+
+        String normalized = customerId.trim();
+        return normalized.isEmpty() ? UUID.randomUUID().toString() : normalized;
     }
 }

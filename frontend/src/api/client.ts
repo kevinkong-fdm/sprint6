@@ -8,6 +8,7 @@ type StoredAuthSession = {
   refreshToken: string;
   accessTokenExpiresInSeconds: number;
   refreshTokenExpiresInSeconds: number;
+  userId?: string;
   email?: string;
 };
 
@@ -102,6 +103,7 @@ async function refreshAccessToken(): Promise<string | null> {
       refreshToken: payload.refreshToken,
       accessTokenExpiresInSeconds: Number(payload.accessTokenExpiresInSeconds ?? session.accessTokenExpiresInSeconds ?? 0),
       refreshTokenExpiresInSeconds: Number(payload.refreshTokenExpiresInSeconds ?? session.refreshTokenExpiresInSeconds ?? 0),
+      userId: typeof payload.userId === "string" ? payload.userId : session.userId,
       email: session.email,
     };
 
@@ -167,6 +169,7 @@ function readSessionFromStorage(): StoredAuthSession | null {
       refreshToken: parsed.refreshToken,
       accessTokenExpiresInSeconds: Number(parsed.accessTokenExpiresInSeconds ?? 0),
       refreshTokenExpiresInSeconds: Number(parsed.refreshTokenExpiresInSeconds ?? 0),
+      userId: parsed.userId,
       email: parsed.email,
     };
   } catch {

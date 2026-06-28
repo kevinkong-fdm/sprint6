@@ -1,10 +1,12 @@
 import { useMemo } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../features/auth/session/AuthSessionContext";
 
 export function AppShell() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, session, signOut } = useAuthSession();
+  const isLoginRoute = location.pathname === "/login";
 
   const navigationItems = useMemo(() => {
     const items = [{ to: "/", label: "Overview" }];
@@ -52,7 +54,14 @@ export function AppShell() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <nav aria-label="Primary" className="flex flex-wrap gap-2">
+              <nav
+                aria-label="Primary"
+                className={
+                  isLoginRoute && !isAuthenticated
+                    ? "flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                    : "flex flex-wrap gap-2"
+                }
+              >
                 {navigationItems.map((item) => (
                   <NavLink
                     key={item.to}

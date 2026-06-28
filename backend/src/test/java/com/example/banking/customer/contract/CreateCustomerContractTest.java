@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = CreateCustomerController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(CustomerExceptionHandler.class)
+@Import({CustomerExceptionHandler.class, CreateCustomerController.class})
 class CreateCustomerContractTest {
 
     @Autowired

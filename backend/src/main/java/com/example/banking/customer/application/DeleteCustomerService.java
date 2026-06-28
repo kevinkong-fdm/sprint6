@@ -1,5 +1,6 @@
 package com.example.banking.customer.application;
 
+import com.example.banking.auth.application.DeleteAccountService;
 import com.example.banking.customer.domain.CustomerProfileEntity;
 import com.example.banking.customer.domain.LifecycleAction;
 import com.example.banking.customer.infrastructure.CustomerProfileRepository;
@@ -11,17 +12,17 @@ import org.springframework.transaction.annotation.Transactional;
 public class DeleteCustomerService {
 
     private final CustomerProfileRepository customerProfileRepository;
-    private final CustomerCascadeDeleteCoordinator customerCascadeDeleteCoordinator;
     private final CustomerLifecycleEventService customerLifecycleEventService;
+    private final DeleteAccountService deleteAccountService;
 
     public DeleteCustomerService(
             CustomerProfileRepository customerProfileRepository,
-            CustomerCascadeDeleteCoordinator customerCascadeDeleteCoordinator,
-            CustomerLifecycleEventService customerLifecycleEventService
+            CustomerLifecycleEventService customerLifecycleEventService,
+            DeleteAccountService deleteAccountService
     ) {
         this.customerProfileRepository = customerProfileRepository;
-        this.customerCascadeDeleteCoordinator = customerCascadeDeleteCoordinator;
         this.customerLifecycleEventService = customerLifecycleEventService;
+        this.deleteAccountService = deleteAccountService;
     }
 
     @Transactional
@@ -39,7 +40,9 @@ public class DeleteCustomerService {
                 });
 
         try {
-            customerCascadeDeleteCoordinator.deleteCustomer(profile);
+            deleteAccountService.deleteAccountWithAuthData(
+                    profile.getCustomerId(),
+                    profile.getEmailNormalized());
             customerLifecycleEventService.recordSuccess(
                     customerId,
                     LifecycleAction.DELETE,

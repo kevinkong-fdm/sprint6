@@ -7,15 +7,17 @@ public record AuthTokenResponse(
         String accessToken,
         String refreshToken,
         long accessTokenExpiresInSeconds,
-        long refreshTokenExpiresInSeconds
+        long refreshTokenExpiresInSeconds,
+        String userId
 ) {
-    public static AuthTokenResponse from(JwtTokenService.TokenPair pair) {
+    public static AuthTokenResponse from(JwtTokenService.TokenPair pair, String userId) {
         return new AuthTokenResponse(
                 pair.tokenType(),
                 pair.accessToken(),
                 pair.refreshToken(),
                 pair.accessTokenExpiresInSeconds(),
-                pair.refreshTokenExpiresInSeconds()
+                pair.refreshTokenExpiresInSeconds(),
+                userId
         );
     }
 }

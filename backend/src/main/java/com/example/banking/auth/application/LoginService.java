@@ -94,6 +94,6 @@ public class LoginService {
         );
 
         loginAuditService.success(user.getId(), correlationId);
-        return AuthTokenResponse.from(pair);
+        return AuthTokenResponse.from(pair, user.getId());
     }
 }

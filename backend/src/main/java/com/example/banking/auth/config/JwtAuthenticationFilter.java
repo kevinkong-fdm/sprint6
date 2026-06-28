@@ -1,6 +1,8 @@
 package com.example.banking.auth.config;
 
 import com.example.banking.auth.application.JwtTokenService;
+import com.example.banking.auth.domain.AccountStatus;
+import com.example.banking.auth.infrastructure.UserAccountRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;
@@ -23,9 +25,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenService jwtTokenService;
+    private final UserAccountRepository userAccountRepository;
 
-    public JwtAuthenticationFilter(JwtTokenService jwtTokenService) {
+    public JwtAuthenticationFilter(JwtTokenService jwtTokenService, UserAccountRepository userAccountRepository) {
         this.jwtTokenService = jwtTokenService;
+        this.userAccountRepository = userAccountRepository;
     }
 
     @Override
@@ -39,12 +43,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Claims claims = jwtTokenService.parse(token);
                 String tokenType = claims.get("tokenType", String.class);
                 if ("access".equals(tokenType)) {
-                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            claims.getSubject(),
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_OPERATOR")));
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    String subject = claims.getSubject();
+                    boolean accountIsActive = userAccountRepository.existsByIdAndStatusNot(subject, AccountStatus.SUSPENDED);
+                    if (accountIsActive) {
+                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                                subject,
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_OPERATOR")));
+                        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                        SecurityContextHolder.getContext().setAuthentication(authentication);
+                    }
                 }
             } catch (JwtException | IllegalArgumentException ignored) {
                 SecurityContextHolder.clearContext();

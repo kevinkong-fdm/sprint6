@@ -6,6 +6,7 @@ export type AuthSession = {
   refreshToken: string;
   accessTokenExpiresInSeconds: number;
   refreshTokenExpiresInSeconds: number;
+  userId?: string;
   email?: string;
 };
 
@@ -71,6 +72,7 @@ function readSessionFromStorage(): AuthSession | null {
       refreshToken: parsed.refreshToken,
       accessTokenExpiresInSeconds: Number(parsed.accessTokenExpiresInSeconds ?? 0),
       refreshTokenExpiresInSeconds: Number(parsed.refreshTokenExpiresInSeconds ?? 0),
+      userId: parsed.userId,
       email: parsed.email,
     };
   } catch {

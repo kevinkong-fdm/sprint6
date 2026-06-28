@@ -22,7 +22,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = TokenRefreshController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, TokenRefreshController.class})
 class TokenRefreshContractTest {
 
     @Autowired
@@ -34,7 +34,7 @@ class TokenRefreshContractTest {
     @Test
     void shouldRefresh() throws Exception {
         when(refreshTokenService.refresh(any(), any()))
-                .thenReturn(new AuthTokenResponse("Bearer", "a", "b", 3600, 2_592_000));
+                                .thenReturn(new AuthTokenResponse("Bearer", "a", "b", 3600, 2_592_000, "user-1"));
 
         mockMvc.perform(post("/auth/token/refresh")
                         .contentType(MediaType.APPLICATION_JSON)

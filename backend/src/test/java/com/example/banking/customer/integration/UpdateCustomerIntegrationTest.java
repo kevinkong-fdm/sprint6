@@ -24,7 +24,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 @WebMvcTest(controllers = UpdateCustomerController.class)
 @AutoConfigureMockMvc(addFilters = false)
-@Import(CustomerExceptionHandler.class)
+@Import({CustomerExceptionHandler.class, UpdateCustomerController.class})
 class UpdateCustomerIntegrationTest {
 
     @Autowired

@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CustomerResponse,
   CustomerUpdateRequest,
@@ -10,8 +11,10 @@ import { mapCustomerApiError } from "../api/errorMapper";
 import { useAuthSession } from "../../auth/session/AuthSessionContext";
 
 export function CustomersPage() {
+  const navigate = useNavigate();
   const { session, signOut } = useAuthSession();
   const accessToken = session?.accessToken ?? "";
+  const sessionUserId = session?.userId?.trim() ?? "";
   const hasAccessToken = accessToken.trim().length > 0;
 
   const [lookupCustomerId, setLookupCustomerId] = useState("");
@@ -160,6 +163,14 @@ export function CustomersPage() {
 
     try {
       await deleteCustomer(accessToken, trimmedDeleteCustomerId);
+
+      const deletedOwnAccount = sessionUserId.length > 0 && sessionUserId === trimmedDeleteCustomerId;
+      if (deletedOwnAccount) {
+        signOut();
+        navigate("/login", { replace: true });
+        return;
+      }
+
       if (selectedCustomer?.customerId === trimmedDeleteCustomerId) {
         setSelectedCustomer(null);
         clearUpdateForm();

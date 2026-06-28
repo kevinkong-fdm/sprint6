@@ -57,7 +57,11 @@ public class RegistrationService {
         credentialRecordRepository.save(CredentialRecordEntity.of(user.getId(), passwordHash));
 
         try {
-            createCustomerService.create(buildCustomerSeedRequest(user.getEmail()), effectiveCorrelationId, user.getId());
+            createCustomerService.createWithCustomerId(
+                    user.getId(),
+                    buildCustomerSeedRequest(user.getEmail()),
+                    effectiveCorrelationId,
+                    user.getId());
         } catch (CustomerDomainException.DuplicateIdentityException ex) {
             throw new DomainException("AUTH-REG-002", "Duplicate account identifier.", 409);
         }

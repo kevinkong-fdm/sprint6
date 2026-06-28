@@ -11,6 +11,7 @@ export type AuthTokenResponse = {
   refreshToken: string;
   accessTokenExpiresInSeconds: number;
   refreshTokenExpiresInSeconds: number;
+  userId: string;
 };
 
 export async function login(payload: LoginRequest) {
