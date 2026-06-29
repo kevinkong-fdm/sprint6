@@ -99,7 +99,7 @@ export function CustomersPage() {
       hydrateUpdateForm(customer);
       setStatus(`Loaded customer ${customer.customerId}.`);
     } catch (err) {
-      handleCustomerError(err);
+      handleCustomerError(err, "retrieve", trimmedLookupCustomerId);
     } finally {
       setIsLoadingCustomer(false);
     }
@@ -138,7 +138,7 @@ export function CustomersPage() {
       hydrateUpdateForm(updated);
       setStatus(`Updated customer ${updated.customerId}.`);
     } catch (err) {
-      handleCustomerError(err);
+      handleCustomerError(err, "update", trimmedLookupCustomerId);
     } finally {
       setIsUpdating(false);
     }
@@ -181,19 +181,62 @@ export function CustomersPage() {
       setDeleteCustomerId("");
       setStatus(`Deleted customer ${trimmedDeleteCustomerId}.`);
     } catch (err) {
-      handleCustomerError(err);
+      handleCustomerError(err, "delete", trimmedDeleteCustomerId);
     } finally {
       setIsDeleting(false);
     }
   }
 
-  function handleCustomerError(err: unknown) {
+  function handleCustomerError(
+    err: unknown,
+    operation?: "retrieve" | "update" | "delete",
+    customerId?: string,
+  ) {
     const mapped = mapCustomerApiError(err);
-    setError(mapped.message);
+    const scopedMessage = buildScopedCustomerErrorMessage(mapped.code, mapped.message, operation, customerId);
+    setError(scopedMessage);
 
     if (isSessionRecoveryRequired(mapped.code)) {
       signOut();
     }
+  }
+
+  function buildScopedCustomerErrorMessage(
+    code: string,
+    message: string,
+    operation?: "retrieve" | "update" | "delete",
+    customerId?: string,
+  ): string {
+    const id = customerId?.trim();
+    const withId = id ? ` for customer ID ${id}` : "";
+
+    if (operation === "retrieve") {
+      if (code === "CUST-GET-001") {
+        return `Unable to retrieve profile${withId}. Confirm the customer ID exists and belongs to your accessible scope.`;
+      }
+      if (code === "CUST-AUTH-001") {
+        return `Unable to retrieve profile${withId}. Your current session is not authorized for this customer.`;
+      }
+      return `Unable to retrieve profile${withId}. ${message}`;
+    }
+
+    if (operation === "update") {
+      if (code === "CUST-GET-001") {
+        return `Unable to update profile${withId} because the customer was not found.`;
+      }
+      if (code === "CUST-UPD-001") {
+        return `Unable to update profile${withId}. Verify the update fields are valid and try again.`;
+      }
+      if (code === "CUST-UPD-003") {
+        return `Unable to update profile${withId}. One or more requested fields are immutable.`;
+      }
+      if (code === "CUST-AUTH-001") {
+        return `Unable to update profile${withId}. Your current session is not authorized for this customer.`;
+      }
+      return `Unable to update profile${withId}. ${message}`;
+    }
+
+    return message;
   }
 
   function handleUseLoadedCustomer() {

@@ -28,6 +28,12 @@ export function HomePage() {
   const visibleActions = isAuthenticated
     ? [
         {
+          title: "Accounts",
+          description: "Open the account workspace to create accounts, post deposits and withdrawals, transfer funds, and inspect transaction history.",
+          to: "/accounts",
+          cta: "Open accounts",
+        },
+        {
           title: "Customers",
           description: "Open the authenticated customer workspace and run create, retrieve, update, and delete operations.",
           to: "/customers",

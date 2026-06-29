@@ -1,0 +1,791 @@
+openapi: 3.1.0
+info:
+  title: Authenticated Bank Account Operations API
+  version: 1.0.0
+  description: >-
+    Contract for authenticated account CRUD, monetary movement, transfer,
+    and transaction history operations for local-only execution.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+
+paths:
+  /accounts:
+    post:
+      summary: Create account
+      operationId: createAccount
+      tags: [Accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                createValidation:
+                  value:
+                    errorCode: ACCT-CRT-001
+                    message: Account creation validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+    get:
+      summary: List customer accounts
+      operationId: listAccounts
+      tags: [Accounts]
+      parameters:
+        - in: query
+          name: accountType
+          required: false
+          schema:
+            type: string
+            enum: [CHECKING, SAVINGS]
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 20
+      responses:
+        '200':
+          description: Accounts listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+
+  /accounts/{accountId}:
+    parameters:
+      - in: path
+        name: accountId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Retrieve account details
+      operationId: getAccount
+      tags: [Accounts]
+      responses:
+        '200':
+          description: Account found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-GET-001
+                    message: Account not found.
+                    correlationId: corr-123
+
+    patch:
+      summary: Update account
+      operationId: updateAccount
+      tags: [Accounts]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAccountRequest'
+      responses:
+        '200':
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountResponse'
+        '400':
+          description: Validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                updateValidation:
+                  value:
+                    errorCode: ACCT-UPD-001
+                    message: Account update validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-GET-001
+                    message: Account not found.
+                    correlationId: corr-123
+        '422':
+          description: Immutable field update attempted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                immutableField:
+                  value:
+                    errorCode: ACCT-UPD-002
+                    message: Immutable account field update attempted.
+                    correlationId: corr-123
+
+    delete:
+      summary: Delete account
+      operationId: deleteAccount
+      tags: [Accounts]
+      description: >-
+        Deletes the target account when no pending movement exists. If source
+        balance is non-zero, closeoutDestinationAccountId is required and a
+        closeout transfer is posted atomically before deletion.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccountRequest'
+      responses:
+        '204':
+          description: Account deleted
+        '400':
+          description: Delete request validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                deleteValidation:
+                  value:
+                    errorCode: ACCT-DEL-002
+                    message: Account delete not allowed due to pending movement activity.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-DEL-001
+                    message: Account not found for delete operation.
+                    correlationId: corr-123
+        '409':
+          description: Delete eligibility conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                deleteConflict:
+                  value:
+                    errorCode: ACCT-DEL-002
+                    message: Account delete not allowed due to pending movement activity.
+                    correlationId: corr-123
+
+  /accounts/{accountId}/deposits:
+    parameters:
+      - in: path
+        name: accountId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Deposit funds
+      operationId: depositFunds
+      tags: [Movements]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepositRequest'
+      responses:
+        '201':
+          description: Deposit posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementResponse'
+        '400':
+          description: Deposit validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                depositValidation:
+                  value:
+                    errorCode: TXN-DEP-001
+                    message: Deposit amount validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-GET-001
+                    message: Account not found.
+                    correlationId: corr-123
+
+  /accounts/{accountId}/withdrawals:
+    parameters:
+      - in: path
+        name: accountId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      summary: Withdraw funds
+      operationId: withdrawFunds
+      tags: [Movements]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WithdrawalRequest'
+      responses:
+        '201':
+          description: Withdrawal posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovementResponse'
+        '400':
+          description: Withdrawal validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                withdrawalValidation:
+                  value:
+                    errorCode: TXN-WDR-001
+                    message: Withdrawal amount validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-GET-001
+                    message: Account not found.
+                    correlationId: corr-123
+        '409':
+          description: Insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                insufficientFunds:
+                  value:
+                    errorCode: TXN-WDR-002
+                    message: Insufficient funds for withdrawal.
+                    correlationId: corr-123
+
+  /transfers:
+    post:
+      summary: Transfer funds
+      operationId: transferFunds
+      tags: [Transfers]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferRequest'
+      responses:
+        '201':
+          description: Transfer posted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+        '400':
+          description: Transfer validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                transferValidation:
+                  value:
+                    errorCode: TXN-TRF-001
+                    message: Transfer amount validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '409':
+          description: Transfer conflict (pairing or funds)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                sameAccount:
+                  value:
+                    errorCode: TXN-TRF-002
+                    message: Invalid transfer account pairing.
+                    correlationId: corr-123
+                insufficientFunds:
+                  value:
+                    errorCode: TXN-TRF-003
+                    message: Insufficient funds for transfer.
+                    correlationId: corr-123
+
+  /accounts/{accountId}/transactions:
+    parameters:
+      - in: path
+        name: accountId
+        required: true
+        schema:
+          type: string
+          format: uuid
+    get:
+      summary: Get transaction history
+      operationId: getTransactionHistory
+      tags: [Transactions]
+      parameters:
+        - in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: to
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - in: query
+          name: type
+          required: false
+          schema:
+            type: string
+            enum: [DEPOSIT, WITHDRAWAL, TRANSFER_DEBIT, TRANSFER_CREDIT, CLOSEOUT_DEBIT, CLOSEOUT_CREDIT]
+        - in: query
+          name: page
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - in: query
+          name: size
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        '200':
+          description: Transaction history returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransactionHistoryResponse'
+        '400':
+          description: Transaction history filter validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                historyValidation:
+                  value:
+                    errorCode: TXN-HIS-001
+                    message: Transaction history filter validation failed.
+                    correlationId: corr-123
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                accountNotFound:
+                  value:
+                    errorCode: ACCT-GET-001
+                    message: Account not found.
+                    correlationId: corr-123
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    UnauthenticatedError:
+      description: Authentication required or invalid session
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthenticated:
+              value:
+                errorCode: AUTH-ACC-001
+                message: Authentication required or session invalid.
+                correlationId: corr-123
+
+    ForbiddenError:
+      description: Authenticated caller is not authorized for target account
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              value:
+                errorCode: AUTH-ACC-002
+                message: Account access forbidden for authenticated caller.
+                correlationId: corr-123
+
+  schemas:
+    CreateAccountRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - accountType
+      properties:
+        accountType:
+          type: string
+          enum: [CHECKING, SAVINGS]
+        nickname:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    UpdateAccountRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        nickname:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    DeleteAccountRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        closeoutDestinationAccountId:
+          type: string
+          format: uuid
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    DepositRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+      properties:
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    WithdrawalRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - amount
+      properties:
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    TransferRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - sourceAccountId
+        - destinationAccountId
+        - amount
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        destinationAccountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        idempotencyKey:
+          type: string
+          minLength: 1
+          maxLength: 120
+
+    AccountResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - customerId
+        - accountType
+        - currencyCode
+        - availableBalance
+        - ledgerBalance
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        accountType:
+          type: string
+          enum: [CHECKING, SAVINGS]
+        nickname:
+          type: string
+        currencyCode:
+          type: string
+          minLength: 3
+          maxLength: 3
+        availableBalance:
+          $ref: '#/components/schemas/MoneyAmount'
+        ledgerBalance:
+          $ref: '#/components/schemas/MoneyAmount'
+        status:
+          type: string
+          enum: [ACTIVE, PENDING_DELETE]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AccountListResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - items
+        - page
+        - size
+        - total
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AccountResponse'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+
+    MovementResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - movementId
+        - accountId
+        - movementType
+        - amount
+        - balanceAfter
+        - postedAt
+      properties:
+        movementId:
+          type: string
+          format: uuid
+        accountId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL, TRANSFER_DEBIT, TRANSFER_CREDIT, CLOSEOUT_DEBIT, CLOSEOUT_CREDIT]
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        balanceAfter:
+          $ref: '#/components/schemas/MoneyAmount'
+        postedAt:
+          type: string
+          format: date-time
+
+    TransferResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - transferId
+        - sourceMovement
+        - destinationMovement
+      properties:
+        transferId:
+          type: string
+          format: uuid
+        sourceMovement:
+          $ref: '#/components/schemas/MovementResponse'
+        destinationMovement:
+          $ref: '#/components/schemas/MovementResponse'
+
+    TransactionHistoryResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - items
+        - page
+        - size
+        - total
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TransactionHistoryItem'
+        page:
+          type: integer
+        size:
+          type: integer
+        total:
+          type: integer
+
+    TransactionHistoryItem:
+      type: object
+      additionalProperties: false
+      required:
+        - movementId
+        - movementType
+        - amount
+        - balanceAfter
+        - status
+        - createdAt
+      properties:
+        movementId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+          enum: [DEPOSIT, WITHDRAWAL, TRANSFER_DEBIT, TRANSFER_CREDIT, CLOSEOUT_DEBIT, CLOSEOUT_CREDIT]
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        balanceAfter:
+          $ref: '#/components/schemas/MoneyAmount'
+        status:
+          type: string
+          enum: [PENDING, POSTED, FAILED]
+        createdAt:
+          type: string
+          format: date-time
+        postedAt:
+          type: string
+          format: date-time
+        referenceId:
+          type: string
+          format: uuid
+
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\\.[0-9]{1,4})?$'
+      description: Decimal amount with up to 4 fractional digits.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - errorCode
+        - message
+        - correlationId
+      properties:
+        errorCode:
+          type: string
+        message:
+          type: string
+        correlationId:
+          type: string

@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "generate:api": "openapi --input ../specs/001-digital-banking-auth/contracts/auth.openapi.yaml --output src/api/generated --client fetch --useOptions --useUnionTypes"
+    "generate:api": "openapi --input ../specs/001-digital-banking-auth/contracts/auth.openapi.yaml --output src/api/generated --client fetch --useOptions --useUnionTypes",
+    "generate:api:account": "openapi --input ../specs/003-bank-account-operations/contracts/account.openapi.yaml --output src/api/generated/account --client fetch --useOptions --useUnionTypes"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.48.0",

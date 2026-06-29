@@ -32,6 +32,7 @@ env/
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
 *.tmp
 
 # Project specific
@@ -52,6 +53,7 @@ frontend/.vite/
 
 # Java / Spring Boot
 backend/target/
+/.gradle/
 backend/.mvn/wrapper/maven-wrapper.jar
 *.class
 *.jar

@@ -1,16 +1,15 @@
 import { useMemo } from "react";
-import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuthSession } from "../features/auth/session/AuthSessionContext";
 
 export function AppShell() {
-  const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, session, signOut } = useAuthSession();
-  const isLoginRoute = location.pathname === "/login";
 
   const navigationItems = useMemo(() => {
     const items = [{ to: "/", label: "Overview" }];
     if (isAuthenticated) {
+      items.push({ to: "/accounts", label: "Accounts" });
       items.push({ to: "/customers", label: "Customers" });
     } else {
       items.push({ to: "/login", label: "Login" });
@@ -53,14 +52,10 @@ export function AppShell() {
               ) : null}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex w-full flex-wrap items-center gap-2 md:justify-end">
               <nav
                 aria-label="Primary"
-                className={
-                  isLoginRoute && !isAuthenticated
-                    ? "flex min-w-0 flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                    : "flex flex-wrap gap-2"
-                }
+                className="flex min-w-0 flex-wrap items-center gap-2"
               >
                 {navigationItems.map((item) => (
                   <NavLink
@@ -68,7 +63,7 @@ export function AppShell() {
                     to={item.to}
                     className={({ isActive }) =>
                       [
-                        "rounded-full px-4 py-2 text-sm font-semibold transition duration-200",
+                        "rounded-full px-3 py-2 text-xs font-semibold transition duration-200 sm:px-4 sm:text-sm",
                         isActive
                           ? "bg-cyan-300 text-slate-950"
                           : "bg-white/5 text-slate-200 hover:bg-white/15 hover:text-white",
@@ -84,7 +79,7 @@ export function AppShell() {
                 <button
                   type="button"
                   onClick={handleSignOut}
-                  className="rounded-full bg-rose-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-rose-200"
+                  className="rounded-full bg-rose-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-rose-200 sm:px-4 sm:text-sm"
                 >
                   Logout
                 </button>
