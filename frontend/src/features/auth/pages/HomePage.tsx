@@ -39,12 +39,36 @@ export function HomePage() {
           to: "/customers",
           cta: "Open customers",
         },
+        {
+          title: "Standing orders",
+          description: "Create recurring internal transfers, manage lifecycle states, and trigger execution attempts from one operational console.",
+          to: "/standing-orders",
+          cta: "Open standing orders",
+        },
+        {
+          title: "Notifications",
+          description: "Inspect standing-order lifecycle and execution notifications with event and dispatch status filtering.",
+          to: "/notifications",
+          cta: "Open notifications",
+        },
+        {
+          title: "Statements",
+          description: "Generate or retrieve monthly statements with deterministic totals, line items, and no-activity month behavior.",
+          to: "/statements",
+          cta: "Open statements",
+        },
+        {
+          title: "Insights",
+          description: "Load spending insight snapshots with category deltas and low-data indicators when historical data is limited.",
+          to: "/insights",
+          cta: "Open insights",
+        },
       ]
     : guestActions;
 
   return (
     <section className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {visibleActions.map((action) => (
           <article
             key={action.to}

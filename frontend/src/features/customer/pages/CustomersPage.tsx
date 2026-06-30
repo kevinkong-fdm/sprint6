@@ -34,6 +34,8 @@ export function CustomersPage() {
 
   const trimmedLookupCustomerId = lookupCustomerId.trim();
   const trimmedDeleteCustomerId = deleteCustomerId.trim();
+  const hasLoadedCustomer = selectedCustomer !== null;
+  const loadedCustomerId = selectedCustomer?.customerId?.trim() ?? "";
 
   const prettyCustomer = useMemo(() => {
     if (!selectedCustomer) {
@@ -51,7 +53,7 @@ export function CustomersPage() {
 
   const hasUpdateChanges = useMemo(() => {
     if (!selectedCustomer) {
-      return updatePayload !== null;
+      return false;
     }
 
     return (
@@ -66,13 +68,12 @@ export function CustomersPage() {
     updateFamilyName,
     updatePhoneNumber,
     updateLanguage,
-    updatePayload,
   ]);
 
   const isBusy = isLoadingCustomer || isUpdating || isDeleting;
 
   const canLookup = hasAccessToken && trimmedLookupCustomerId.length > 0 && !isBusy;
-  const canUpdate = hasAccessToken && trimmedLookupCustomerId.length > 0 && !isBusy && hasUpdateChanges;
+  const canUpdate = hasAccessToken && hasLoadedCustomer && loadedCustomerId.length > 0 && !isBusy && hasUpdateChanges;
   const canDelete = hasAccessToken && trimmedDeleteCustomerId.length > 0 && !isBusy;
 
   async function handleLookup(event: FormEvent) {
@@ -115,7 +116,7 @@ export function CustomersPage() {
       return;
     }
 
-    if (!trimmedLookupCustomerId) {
+    if (!selectedCustomer || !loadedCustomerId) {
       setError("Load a customer before applying updates.");
       return;
     }
@@ -133,12 +134,12 @@ export function CustomersPage() {
 
     setIsUpdating(true);
     try {
-      const updated = await updateCustomer(accessToken, trimmedLookupCustomerId, payload);
+      const updated = await updateCustomer(accessToken, loadedCustomerId, payload);
       setSelectedCustomer(updated);
       hydrateUpdateForm(updated);
       setStatus(`Updated customer ${updated.customerId}.`);
     } catch (err) {
-      handleCustomerError(err, "update", trimmedLookupCustomerId);
+      handleCustomerError(err, "update", loadedCustomerId);
     } finally {
       setIsUpdating(false);
     }
@@ -256,6 +257,13 @@ export function CustomersPage() {
     setError("");
   }
 
+  function handleCancelUpdate() {
+    setSelectedCustomer(null);
+    clearUpdateForm();
+    setStatus("Canceled update. Load another customer to continue.");
+    setError("");
+  }
+
   function buildUpdatePayload(): CustomerUpdateRequest | null {
     const payload: CustomerUpdateRequest = {};
 
@@ -295,7 +303,7 @@ export function CustomersPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Customers</p>
         <h2 className="mt-2 text-3xl font-semibold text-white">Customer operations</h2>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Customer profiles are created during account registration. Use this console to retrieve, update, and delete profiles.
+          Customer profiles are created during account registration. Retrieve, update, and delete profiles.
         </p>
         {!hasAccessToken ? (
           <p className="mt-4 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
@@ -324,71 +332,89 @@ export function CustomersPage() {
             >
               {isLoadingCustomer ? "Loading..." : "Load customer"}
             </button>
-            <p className="text-xs text-slate-400">Load a customer to auto-fill the update form.</p>
           </form>
 
-          <form onSubmit={handleUpdate} className="mt-4 space-y-3 border-t border-white/10 pt-4">
-            <input
-              aria-label="Update given name"
-              type="text"
-              value={updateGivenName}
-              onChange={(event) => setUpdateGivenName(event.target.value)}
-              placeholder="New given name"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="Update family name"
-              type="text"
-              value={updateFamilyName}
-              onChange={(event) => setUpdateFamilyName(event.target.value)}
-              placeholder="New family name"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="Update phone number"
-              type="text"
-              value={updatePhoneNumber}
-              onChange={(event) => setUpdatePhoneNumber(event.target.value)}
-              placeholder="New phone number"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="Update preferred language"
-              type="text"
-              value={updateLanguage}
-              onChange={(event) => setUpdateLanguage(event.target.value)}
-              placeholder="New preferred language"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <button
-              type="submit"
-              disabled={!canUpdate}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
-            >
-              {isUpdating ? "Updating..." : "Apply update"}
-            </button>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleUseLoadedCustomer}
-                disabled={!selectedCustomer || isBusy}
-                className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Sync from loaded profile
-              </button>
-              <button
-                type="button"
-                onClick={handleClearUpdate}
-                disabled={isBusy}
-                className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Clear fields
-              </button>
+          {hasLoadedCustomer ? (
+            <form onSubmit={handleUpdate} className="mt-4 space-y-3 border-t border-white/10 pt-4">
+              <p className="text-xs text-slate-400">
+                Updating loaded customer <span className="font-medium text-slate-200">{loadedCustomerId}</span>
+              </p>
+              <input
+                aria-label="Update given name"
+                type="text"
+                value={updateGivenName}
+                onChange={(event) => setUpdateGivenName(event.target.value)}
+                placeholder="New given name"
+                className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+              <input
+                aria-label="Update family name"
+                type="text"
+                value={updateFamilyName}
+                onChange={(event) => setUpdateFamilyName(event.target.value)}
+                placeholder="New family name"
+                className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+              <input
+                aria-label="Update phone number"
+                type="text"
+                value={updatePhoneNumber}
+                onChange={(event) => setUpdatePhoneNumber(event.target.value)}
+                placeholder="New phone number"
+                className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+              <input
+                aria-label="Update preferred language"
+                type="text"
+                value={updateLanguage}
+                onChange={(event) => setUpdateLanguage(event.target.value)}
+                placeholder="New preferred language"
+                className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="submit"
+                  disabled={!canUpdate}
+                  className="inline-flex flex-1 items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+                >
+                  {isUpdating ? "Updating..." : "Apply update"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCancelUpdate}
+                  disabled={isBusy}
+                  className="inline-flex flex-1 items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  Cancel update
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleUseLoadedCustomer}
+                  disabled={!selectedCustomer || isBusy}
+                  className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Sync from loaded profile
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClearUpdate}
+                  disabled={isBusy}
+                  className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Clear fields
+                </button>
+              </div>
+              {!hasUpdateChanges ? (
+                <p className="text-xs text-slate-400">No pending mutable-field changes detected.</p>
+              ) : null}
+            </form>
+          ) : (
+            <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-xs text-slate-400">
+              Load a customer profile to unlock the update form.
             </div>
-            {!hasUpdateChanges ? (
-              <p className="text-xs text-slate-400">No pending mutable-field changes detected.</p>
-            ) : null}
-          </form>
+          )}
         </article>
 
         <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl xl:col-span-1">
@@ -410,7 +436,7 @@ export function CustomersPage() {
             >
               {isDeleting ? "Deleting..." : "Delete customer"}
             </button>
-            <p className="text-xs text-slate-400">Delete performs irreversible hard removal with backend cascade rules.</p>
+            <p className="text-xs text-slate-400">Delete performs irreversible hard removal.</p>
           </form>
 
           <div className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 p-4">

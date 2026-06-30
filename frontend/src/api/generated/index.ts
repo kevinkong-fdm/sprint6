@@ -17,3 +17,6 @@ export type { RegisterResponse } from './models/RegisterResponse';
 export type { TokenRefreshRequest } from './models/TokenRefreshRequest';
 
 export { AuthenticationService } from './services/AuthenticationService';
+
+export * as AccountApi from './account';
+export * as StandingOrdersApi from './standing-orders';

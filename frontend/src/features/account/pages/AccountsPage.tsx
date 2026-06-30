@@ -213,11 +213,17 @@ export function AccountsPage() {
       return;
     }
 
+    const accountName = createNickname.trim();
+    if (!accountName) {
+      setError("Account name is required before creating an account.");
+      return;
+    }
+
     setIsCreating(true);
     try {
       const created = await createAccount(accessToken, {
         accountType: createAccountType,
-        nickname: normalizeOptional(createNickname),
+        nickname: accountName,
       });
 
       setStatus(`Created ${created.accountType.toLowerCase()} account ${created.accountId}.`);
@@ -487,9 +493,10 @@ export function AccountsPage() {
         ) : null}
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-2">
+      <div className="grid gap-6 xl:grid-cols-3">
         <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Create and list accounts</h3>
+          <h3 className="text-xl font-semibold text-white">Create account</h3>
+          <p className="mt-2 text-sm text-slate-300">Open a new checking or savings account with a required account name.</p>
 
           <form onSubmit={handleCreateAccount} className="mt-4 grid gap-3 sm:grid-cols-2">
             <select
@@ -505,11 +512,12 @@ export function AccountsPage() {
               ))}
             </select>
             <input
-              aria-label="Create account nickname"
+              aria-label="Create account name"
               type="text"
+              required
               value={createNickname}
               onChange={(event) => setCreateNickname(event.target.value)}
-              placeholder="Optional nickname"
+              placeholder="Account name"
               className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
             />
             <button
@@ -520,76 +528,79 @@ export function AccountsPage() {
               {isCreating ? "Creating..." : "Create account"}
             </button>
           </form>
+        </article>
 
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                aria-label="Filter account type"
-                value={accountTypeFilter}
-                onChange={(event) => setAccountTypeFilter(event.target.value as "" | AccountType)}
-                className="rounded-full border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-cyan-300 focus:outline-none"
-              >
-                <option value="">All account types</option>
-                {accountTypeOptions.map((accountType) => (
-                  <option key={accountType} value={accountType}>
-                    {accountType}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => {
-                  void loadAccounts();
-                }}
-                disabled={!hasAccessToken || isBusy}
-                className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoadingAccounts ? "Refreshing..." : "Refresh list"}
-              </button>
-            </div>
+        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
+          <h3 className="text-xl font-semibold text-white">Account listing</h3>
+          <p className="mt-2 text-sm text-slate-300">Filter and load existing accounts independently from account creation.</p>
 
-            <div className="mt-4 space-y-2">
-              {accounts.length === 0 ? (
-                <p className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
-                  No accounts loaded yet.
-                </p>
-              ) : (
-                accounts.map((account) => (
-                  <article
-                    key={account.accountId}
-                    className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 transition hover:border-cyan-300/40 hover:bg-slate-900/70"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs uppercase tracking-[0.14em] text-slate-400">{account.accountType}</p>
-                        <p className="mt-1 break-all text-sm font-semibold text-white">{account.accountId}</p>
-                        <p className="mt-1 text-xs text-slate-300">
-                          {account.nickname || "No nickname"} • {account.currencyCode} {formatMoney(account.availableBalance)}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          void handleCopyAccountId(account.accountId);
-                        }}
-                        className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
-                      >
-                        Copy ID
-                      </button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <select
+              aria-label="Filter account type"
+              value={accountTypeFilter}
+              onChange={(event) => setAccountTypeFilter(event.target.value as "" | AccountType)}
+              className="rounded-full border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-cyan-300 focus:outline-none"
+            >
+              <option value="">All account types</option>
+              {accountTypeOptions.map((accountType) => (
+                <option key={accountType} value={accountType}>
+                  {accountType}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                void loadAccounts();
+              }}
+              disabled={!hasAccessToken || isBusy}
+              className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoadingAccounts ? "Refreshing..." : "Refresh list"}
+            </button>
+          </div>
+
+          <div className="mt-4 space-y-2">
+            {accounts.length === 0 ? (
+              <p className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
+                No accounts loaded yet.
+              </p>
+            ) : (
+              accounts.map((account) => (
+                <article
+                  key={account.accountId}
+                  className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 transition hover:border-cyan-300/40 hover:bg-slate-900/70"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-xs uppercase tracking-[0.14em] text-slate-400">{account.accountType}</p>
+                      <p className="mt-1 break-all text-sm font-semibold text-white">{account.accountId}</p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        {account.nickname || "Unnamed account"} • {account.currencyCode} {formatMoney(account.availableBalance)}
+                      </p>
                     </div>
                     <button
                       type="button"
                       onClick={() => {
-                        void loadAccountDetail(account.accountId);
+                        void handleCopyAccountId(account.accountId);
                       }}
-                      className="mt-3 inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200"
+                      className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
                     >
-                      Load account
+                      Copy ID
                     </button>
-                  </article>
-                ))
-              )}
-            </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void loadAccountDetail(account.accountId);
+                    }}
+                    className="mt-3 inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200"
+                  >
+                    Load account
+                  </button>
+                </article>
+              ))
+            )}
           </div>
         </article>
 
@@ -677,7 +688,8 @@ export function AccountsPage() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Movements and transfers</h3>
+          <h3 className="text-xl font-semibold text-white">Movements</h3>
+          <p className="mt-2 text-sm text-slate-300">Run deposits and withdrawals on the currently selected account.</p>
 
           <form onSubmit={handleDeposit} className="mt-4 space-y-3">
             <input
@@ -718,8 +730,13 @@ export function AccountsPage() {
               {isWithdrawing ? "Posting withdrawal..." : "Withdraw"}
             </button>
           </form>
+        </article>
 
-          <form onSubmit={handleTransfer} className="mt-4 space-y-3 border-t border-white/10 pt-4">
+        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
+          <h3 className="text-xl font-semibold text-white">Transfers</h3>
+          <p className="mt-2 text-sm text-slate-300">Move funds between two different accounts.</p>
+
+          <form onSubmit={handleTransfer} className="mt-4 space-y-3">
             <select
               aria-label="Transfer source account"
               value={transferSourceAccountId}
@@ -760,98 +777,98 @@ export function AccountsPage() {
             </button>
           </form>
         </article>
-
-        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Transaction history</h3>
-
-          <form onSubmit={handleLoadHistory} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <input
-              aria-label="History from timestamp"
-              type="datetime-local"
-              value={historyFrom}
-              onChange={(event) => setHistoryFrom(event.target.value)}
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="History to timestamp"
-              type="datetime-local"
-              value={historyTo}
-              onChange={(event) => setHistoryTo(event.target.value)}
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <select
-              aria-label="History movement type"
-              value={historyType}
-              onChange={(event) => setHistoryType(event.target.value as "" | MovementType)}
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            >
-              <option value="">All movement types</option>
-              {historyTypeOptions.map((movementType) => (
-                <option key={movementType} value={movementType}>
-                  {movementType}
-                </option>
-              ))}
-            </select>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                aria-label="History page"
-                type="number"
-                min="1"
-                value={historyPage}
-                onChange={(event) => setHistoryPage(event.target.value)}
-                placeholder="Page"
-                className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-              />
-              <input
-                aria-label="History page size"
-                type="number"
-                min="1"
-                max="200"
-                value={historySize}
-                onChange={(event) => setHistorySize(event.target.value)}
-                placeholder="Size"
-                className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={!hasAccessToken || isBusy || !selectedAccount}
-              className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isLoadingHistory ? "Loading history..." : "Load history"}
-            </button>
-          </form>
-
-          {history && history.items.length > 0 ? (
-            <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60">
-              <table className="min-w-full text-left text-xs text-slate-200">
-                <thead className="border-b border-white/10 text-slate-400">
-                  <tr>
-                    <th className="px-3 py-2 font-semibold">Type</th>
-                    <th className="px-3 py-2 font-semibold">Amount</th>
-                    <th className="px-3 py-2 font-semibold">Balance</th>
-                    <th className="px-3 py-2 font-semibold">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {history.items.map((item) => (
-                    <tr key={item.movementId} className="border-b border-white/5">
-                      <td className="px-3 py-2">{item.movementType}</td>
-                      <td className="px-3 py-2">{formatMoney(item.amount)}</td>
-                      <td className="px-3 py-2">{formatMoney(item.balanceAfter)}</td>
-                      <td className="px-3 py-2">{formatTimestamp(item.createdAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
-              {history ? "No transactions matched the selected filters." : "History results appear here after loading an account history query."}
-            </p>
-          )}
-        </article>
       </div>
+
+      <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
+        <h3 className="text-xl font-semibold text-white">Transaction history</h3>
+
+        <form onSubmit={handleLoadHistory} className="mt-4 grid gap-3 sm:grid-cols-2">
+          <input
+            aria-label="History from timestamp"
+            type="datetime-local"
+            value={historyFrom}
+            onChange={(event) => setHistoryFrom(event.target.value)}
+            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          />
+          <input
+            aria-label="History to timestamp"
+            type="datetime-local"
+            value={historyTo}
+            onChange={(event) => setHistoryTo(event.target.value)}
+            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          />
+          <select
+            aria-label="History movement type"
+            value={historyType}
+            onChange={(event) => setHistoryType(event.target.value as "" | MovementType)}
+            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+          >
+            <option value="">All movement types</option>
+            {historyTypeOptions.map((movementType) => (
+              <option key={movementType} value={movementType}>
+                {movementType}
+              </option>
+            ))}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              aria-label="History page"
+              type="number"
+              min="1"
+              value={historyPage}
+              onChange={(event) => setHistoryPage(event.target.value)}
+              placeholder="Page"
+              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <input
+              aria-label="History page size"
+              type="number"
+              min="1"
+              max="200"
+              value={historySize}
+              onChange={(event) => setHistorySize(event.target.value)}
+              placeholder="Size"
+              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!hasAccessToken || isBusy || !selectedAccount}
+            className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            {isLoadingHistory ? "Loading history..." : "Load history"}
+          </button>
+        </form>
+
+        {history && history.items.length > 0 ? (
+          <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60">
+            <table className="min-w-full text-left text-xs text-slate-200">
+              <thead className="border-b border-white/10 text-slate-400">
+                <tr>
+                  <th className="px-3 py-2 font-semibold">Type</th>
+                  <th className="px-3 py-2 font-semibold">Amount</th>
+                  <th className="px-3 py-2 font-semibold">Balance</th>
+                  <th className="px-3 py-2 font-semibold">Created</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.items.map((item) => (
+                  <tr key={item.movementId} className="border-b border-white/5">
+                    <td className="px-3 py-2">{item.movementType}</td>
+                    <td className="px-3 py-2">{formatMoney(item.amount)}</td>
+                    <td className="px-3 py-2">{formatMoney(item.balanceAfter)}</td>
+                    <td className="px-3 py-2">{formatTimestamp(item.createdAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
+            {history ? "No transactions matched the selected filters." : "History results appear here after loading an account."}
+          </p>
+        )}
+      </article>
 
       {status ? (
         <p role="status" className="rounded-xl border border-emerald-300/30 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">

@@ -1,0 +1,1360 @@
+openapi: 3.1.0
+info:
+  title: Authenticated Standing Orders, Notifications, Statements, and Spending Insights API
+  version: 1.0.0
+  description: >-
+    Contract for local-only authenticated standing-order setup and lifecycle,
+    standing-order notifications, monthly statement generation/retrieval, and
+    spending insights.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+
+x-delivery-scope: local-only
+x-platform-timezone:
+  name: AEST
+  iana: Australia/Brisbane
+  utcOffset: '+10:00'
+x-idempotency:
+  createStandingOrder: Request header `Idempotency-Key` is supported.
+  triggerExecution: Request header `Idempotency-Key` is supported.
+
+tags:
+  - name: StandingOrders
+  - name: Notifications
+  - name: Statements
+  - name: Insights
+
+paths:
+  /standing-orders:
+    post:
+      tags: [StandingOrders]
+      summary: Create standing order
+      operationId: createStandingOrder
+      description: >-
+        Creates a standing order for an authenticated customer. Destination must
+        be an internal platform account owned by the same authenticated customer
+        as the source account.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateStandingOrderRequest'
+      responses:
+        '201':
+          description: Standing order created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '400':
+          description: Setup validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidSetup:
+                  value:
+                    errorCode: SO-SET-001
+                    message: Standing-order setup validation failed.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+                invalidSchedule:
+                  value:
+                    errorCode: SO-SET-002
+                    message: Standing-order schedule configuration invalid.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          description: Source account unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                sourceUnauthorized:
+                  value:
+                    errorCode: SO-SET-003
+                    message: Standing-order source account unauthorized.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '409':
+          description: Destination conflicts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                destinationInternalOnly:
+                  value:
+                    errorCode: SO-SET-004
+                    message: Standing-order destination must be an internal platform account.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+                destinationOwnershipMismatch:
+                  value:
+                    errorCode: SO-SET-005
+                    message: Standing-order destination account is not owned by the authenticated customer.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+    get:
+      tags: [StandingOrders]
+      summary: List standing orders
+      operationId: listStandingOrders
+      description: >-
+        Returns standing orders for the authenticated customer. Ordering is
+        deterministic by `nextExecutionAt` ascending then `standingOrderId`
+        ascending. Supports pagination and status filtering.
+      parameters:
+        - in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum: [ACTIVE, PAUSED, CANCELED]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Standing orders listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+
+    get:
+      tags: [StandingOrders]
+      summary: Retrieve standing order
+      operationId: getStandingOrder
+      responses:
+        '200':
+          description: Standing order found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+    patch:
+      tags: [StandingOrders]
+      summary: Update standing order
+      operationId: updateStandingOrder
+      description: Only mutable standing-order fields may be updated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStandingOrderRequest'
+      responses:
+        '200':
+          description: Standing order updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '400':
+          description: Update validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidUpdate:
+                  value:
+                    errorCode: SO-UPD-001
+                    message: Standing-order update validation failed.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '422':
+          description: Immutable field update attempted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                immutableField:
+                  value:
+                    errorCode: SO-UPD-002
+                    message: Immutable standing-order field update attempted.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}/pause:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+    post:
+      tags: [StandingOrders]
+      summary: Pause standing order
+      operationId: pauseStandingOrder
+      responses:
+        '200':
+          description: Standing order paused
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found for cancellation.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}/resume:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+    post:
+      tags: [StandingOrders]
+      summary: Resume standing order
+      operationId: resumeStandingOrder
+      responses:
+        '200':
+          description: Standing order resumed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found for cancellation.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+    post:
+      tags: [StandingOrders]
+      summary: Cancel standing order
+      operationId: cancelStandingOrder
+      responses:
+        '200':
+          description: Standing order canceled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderSingleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found for cancellation.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}/executions/trigger:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+    post:
+      tags: [StandingOrders]
+      summary: Trigger standing-order execution attempt
+      operationId: triggerStandingOrderExecution
+      description: >-
+        Triggers an execution attempt. Duplicate trigger requests with the same
+        idempotency key must not create duplicate postings.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKeyHeader'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriggerExecutionRequest'
+      responses:
+        '201':
+          description: Execution attempt recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderExecutionSingleResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '409':
+          description: Execution conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                insufficientFunds:
+                  value:
+                    errorCode: SO-EXE-001
+                    message: Standing-order execution failed due to insufficient funds.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+                skippedByState:
+                  value:
+                    errorCode: SO-EXE-002
+                    message: Standing-order execution skipped due to source account state.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /standing-orders/{standingOrderId}/executions:
+    parameters:
+      - $ref: '#/components/parameters/StandingOrderIdParam'
+    get:
+      tags: [StandingOrders]
+      summary: List standing-order executions
+      operationId: listStandingOrderExecutions
+      description: >-
+        Returns execution history ordered by `triggeredAt` descending then
+        `standingOrderExecutionId` descending.
+      parameters:
+        - in: query
+          name: outcome
+          required: false
+          schema:
+            type: string
+            enum: [SUCCESS, FAILED, SKIPPED]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Execution history listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandingOrderExecutionListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Standing order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                notFound:
+                  value:
+                    errorCode: SO-DEL-001
+                    message: Standing-order not found.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /notifications/standing-orders:
+    get:
+      tags: [Notifications]
+      summary: Retrieve standing-order notifications
+      operationId: listStandingOrderNotifications
+      description: >-
+        Returns notifications ordered by `createdAt` descending then
+        `notificationEventId` descending.
+      parameters:
+        - in: query
+          name: eventType
+          required: false
+          schema:
+            type: string
+            enum: [LIFECYCLE_UPDATED, EXECUTION_SUCCESS, EXECUTION_FAILURE, EXECUTION_SKIPPED]
+        - in: query
+          name: dispatchStatus
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, SENT, FAILED]
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/SizeParam'
+      responses:
+        '200':
+          description: Notifications listed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '500':
+          description: Notification dispatch subsystem error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                dispatchFailure:
+                  value:
+                    errorCode: NOTIFY-002
+                    message: Notification dispatch failed after retry policy.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+
+  /notifications/preferences:
+    patch:
+      tags: [Notifications]
+      summary: Update notification preferences (unsupported)
+      operationId: updateNotificationPreferences
+      description: >-
+        Notifications are fixed default-on in this version. Preference updates
+        are intentionally unsupported.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferenceUpdateRequest'
+      responses:
+        '409':
+          description: Preference update not supported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                fixedPreferences:
+                  value:
+                    errorCode: NOTIFY-001
+                    message: Notification preference update is not supported in this version.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /statements/monthly/generate:
+    post:
+      tags: [Statements]
+      summary: Generate monthly statement
+      operationId: generateMonthlyStatement
+      description: >-
+        Generates a statement for a closed month and authorized account using
+        fixed AEST month boundaries. Valid no-activity months return successful
+        statements with zeroed totals.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateMonthlyStatementRequest'
+      responses:
+        '200':
+          description: Statement generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyStatementSingleResponse'
+        '400':
+          description: Statement period validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidPeriod:
+                  value:
+                    errorCode: STMT-001
+                    message: Monthly statement period validation failed.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Statement unavailable for account or period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unavailable:
+                  value:
+                    errorCode: STMT-002
+                    message: Monthly statement unavailable for requested account or period.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /statements/monthly:
+    get:
+      tags: [Statements]
+      summary: Retrieve monthly statement
+      operationId: getMonthlyStatement
+      parameters:
+        - in: query
+          name: accountId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: month
+          required: true
+          description: Calendar month in YYYY-MM evaluated in fixed AEST semantics.
+          schema:
+            type: string
+            pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+      responses:
+        '200':
+          description: Statement retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MonthlyStatementSingleResponse'
+        '400':
+          description: Statement period validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidPeriod:
+                  value:
+                    errorCode: STMT-001
+                    message: Monthly statement period validation failed.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Statement unavailable for account or period
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                unavailable:
+                  value:
+                    errorCode: STMT-002
+                    message: Monthly statement unavailable for requested account or period.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+  /insights/spending:
+    get:
+      tags: [Insights]
+      summary: Retrieve spending insights
+      operationId: getSpendingInsights
+      description: >-
+        Returns categorized spending totals and trend outputs. For valid filters
+        with insufficient history, returns HTTP 200 with `insufficientData=true`
+        and partial metrics instead of an error.
+      parameters:
+        - in: query
+          name: periodStart
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: periodEnd
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: comparisonMode
+          required: false
+          schema:
+            type: string
+            enum: [PREVIOUS_PERIOD, NONE]
+            default: PREVIOUS_PERIOD
+        - in: query
+          name: accountId
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Insights returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpendingInsightsSingleResponse'
+        '400':
+          description: Insights filter validation failure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidFilters:
+                  value:
+                    errorCode: INS-001
+                    message: Spending-insight filter validation failed.
+                    correlationId: corr-123
+                    timestamp: '2026-06-29T10:00:00Z'
+        '401':
+          $ref: '#/components/responses/UnauthenticatedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/UnexpectedError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    StandingOrderIdParam:
+      in: path
+      name: standingOrderId
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    IdempotencyKeyHeader:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
+      description: >-
+        Client-provided idempotency token. Reused key with equivalent request
+        semantics returns prior committed result.
+
+    PageParam:
+      in: query
+      name: page
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+
+    SizeParam:
+      in: query
+      name: size
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 20
+
+  responses:
+    UnauthenticatedError:
+      description: Authentication required or session invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unauthenticated:
+              value:
+                errorCode: AUTH-FEAT-001
+                message: Authentication required or session invalid.
+                correlationId: corr-123
+                timestamp: '2026-06-29T10:00:00Z'
+
+    ForbiddenError:
+      description: Authenticated caller is forbidden for target resource
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            forbidden:
+              value:
+                errorCode: AUTH-FEAT-002
+                message: Feature access forbidden for authenticated caller.
+                correlationId: corr-123
+                timestamp: '2026-06-29T10:00:00Z'
+
+    UnexpectedError:
+      description: Unexpected feature service error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            unexpected:
+              value:
+                errorCode: SYS-FEAT-001
+                message: Unexpected feature service error.
+                correlationId: corr-123
+                timestamp: '2026-06-29T10:00:00Z'
+
+  schemas:
+    StandingOrderSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/StandingOrder'
+
+    StandingOrderListResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+          additionalProperties: false
+          required: [items, page, size, total]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StandingOrder'
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer
+
+    StandingOrderExecutionSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/StandingOrderExecution'
+
+    StandingOrderExecutionListResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+          additionalProperties: false
+          required: [items, page, size, total]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/StandingOrderExecution'
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer
+
+    NotificationListResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          type: object
+          additionalProperties: false
+          required: [items, page, size, total]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationEvent'
+            page:
+              type: integer
+            size:
+              type: integer
+            total:
+              type: integer
+
+    MonthlyStatementSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/MonthlyStatement'
+
+    SpendingInsightsSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [correlationId, timestamp, data]
+      properties:
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/SpendingInsights'
+
+    CreateStandingOrderRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - sourceAccountId
+        - destinationAccountId
+        - amount
+        - frequency
+        - startDate
+      properties:
+        sourceAccountId:
+          type: string
+          format: uuid
+        destinationAccountId:
+          type: string
+          format: uuid
+          description: Internal platform account ID owned by the same customer.
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        frequency:
+          type: string
+          enum: [DAILY, WEEKLY, MONTHLY]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        executionDayOfWeek:
+          type: string
+          enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+        executionDayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 28
+        executionTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          description: HH:mm in fixed AEST semantics.
+        externalBankDetails:
+          type: object
+          deprecated: true
+          description: >-
+            Unsupported in this version. If provided, the request is rejected
+            with SO-SET-004.
+          additionalProperties: true
+
+    UpdateStandingOrderRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        destinationAccountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        frequency:
+          type: string
+          enum: [DAILY, WEEKLY, MONTHLY]
+        endDate:
+          type: string
+          format: date
+        executionDayOfWeek:
+          type: string
+          enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+        executionDayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 28
+        executionTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+
+    TriggerExecutionRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        reason:
+          type: string
+          maxLength: 300
+
+    NotificationPreferenceUpdateRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        standingOrderNotificationsEnabled:
+          type: boolean
+      required:
+        - standingOrderNotificationsEnabled
+
+    GenerateMonthlyStatementRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - month
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        month:
+          type: string
+          pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+
+    StandingOrder:
+      type: object
+      additionalProperties: false
+      required:
+        - standingOrderId
+        - customerId
+        - sourceAccountId
+        - destinationAccountId
+        - amount
+        - frequency
+        - startDate
+        - status
+        - timezone
+        - createdAt
+        - updatedAt
+      properties:
+        standingOrderId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        sourceAccountId:
+          type: string
+          format: uuid
+        destinationAccountId:
+          type: string
+          format: uuid
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        frequency:
+          type: string
+          enum: [DAILY, WEEKLY, MONTHLY]
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        executionDayOfWeek:
+          type: string
+          enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+        executionDayOfMonth:
+          type: integer
+          minimum: 1
+          maximum: 28
+        executionTime:
+          type: string
+          pattern: '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+        status:
+          type: string
+          enum: [ACTIVE, PAUSED, CANCELED]
+        timezone:
+          type: string
+          const: AEST
+        nextExecutionAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastExecutionAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StandingOrderExecution:
+      type: object
+      additionalProperties: false
+      required:
+        - standingOrderExecutionId
+        - standingOrderId
+        - scheduledFor
+        - triggeredAt
+        - outcome
+        - correlationId
+      properties:
+        standingOrderExecutionId:
+          type: string
+          format: uuid
+        standingOrderId:
+          type: string
+          format: uuid
+        scheduledFor:
+          type: string
+          format: date-time
+        triggeredAt:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [SUCCESS, FAILED, SKIPPED]
+        failureReasonCode:
+          type: string
+          enum: [SO-EXE-001, SO-EXE-002]
+        transferReferenceId:
+          type: string
+          format: uuid
+        correlationId:
+          type: string
+
+    NotificationEvent:
+      type: object
+      additionalProperties: false
+      required:
+        - notificationEventId
+        - eventType
+        - title
+        - message
+        - dispatchStatus
+        - createdAt
+      properties:
+        notificationEventId:
+          type: string
+          format: uuid
+        standingOrderId:
+          type: string
+          format: uuid
+        standingOrderExecutionId:
+          type: string
+          format: uuid
+        eventType:
+          type: string
+          enum: [LIFECYCLE_UPDATED, EXECUTION_SUCCESS, EXECUTION_FAILURE, EXECUTION_SKIPPED]
+        title:
+          type: string
+          maxLength: 140
+        message:
+          type: string
+          maxLength: 1000
+        dispatchStatus:
+          type: string
+          enum: [PENDING, SENT, FAILED]
+        dispatchAttemptCount:
+          type: integer
+          minimum: 0
+        createdAt:
+          type: string
+          format: date-time
+        dispatchedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    MonthlyStatement:
+      type: object
+      additionalProperties: false
+      required:
+        - accountId
+        - customerId
+        - month
+        - timezone
+        - openingBalance
+        - closingBalance
+        - totalDebits
+        - totalCredits
+        - lineItems
+        - generatedAt
+      properties:
+        accountId:
+          type: string
+          format: uuid
+        customerId:
+          type: string
+          format: uuid
+        month:
+          type: string
+          pattern: '^[0-9]{4}-(0[1-9]|1[0-2])$'
+        timezone:
+          type: string
+          const: AEST
+        openingBalance:
+          $ref: '#/components/schemas/MoneyAmount'
+        closingBalance:
+          $ref: '#/components/schemas/MoneyAmount'
+        totalDebits:
+          $ref: '#/components/schemas/MoneyAmount'
+        totalCredits:
+          $ref: '#/components/schemas/MoneyAmount'
+        lineItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/StatementLineItem'
+        generatedAt:
+          type: string
+          format: date-time
+
+    StatementLineItem:
+      type: object
+      additionalProperties: false
+      required:
+        - transactionId
+        - postedAt
+        - entryType
+        - amount
+        - balanceAfter
+        - description
+      properties:
+        transactionId:
+          type: string
+          format: uuid
+        postedAt:
+          type: string
+          format: date-time
+        entryType:
+          type: string
+          enum: [DEBIT, CREDIT]
+        amount:
+          $ref: '#/components/schemas/MoneyAmount'
+        balanceAfter:
+          $ref: '#/components/schemas/MoneyAmount'
+        description:
+          type: string
+          maxLength: 200
+
+    SpendingInsights:
+      type: object
+      additionalProperties: false
+      required:
+        - periodStart
+        - periodEnd
+        - comparisonMode
+        - insufficientData
+        - categories
+        - totals
+      properties:
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+        comparisonMode:
+          type: string
+          enum: [PREVIOUS_PERIOD, NONE]
+        insufficientData:
+          type: boolean
+          description: True when history is insufficient for full comparison.
+        insufficiencyReason:
+          type: string
+          enum: [INSUFFICIENT_HISTORY, NONE]
+          description: Explicit insufficiency indicator for low-data success responses.
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpendingCategoryMetric'
+        totals:
+          $ref: '#/components/schemas/SpendingTotals'
+
+    SpendingCategoryMetric:
+      type: object
+      additionalProperties: false
+      required:
+        - category
+        - currentTotal
+      properties:
+        category:
+          type: string
+          maxLength: 64
+        currentTotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        previousTotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        deltaAmount:
+          $ref: '#/components/schemas/MoneyAmount'
+        deltaPercent:
+          type: number
+          format: double
+
+    SpendingTotals:
+      type: object
+      additionalProperties: false
+      required:
+        - currentTotal
+      properties:
+        currentTotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        previousTotal:
+          $ref: '#/components/schemas/MoneyAmount'
+        deltaAmount:
+          $ref: '#/components/schemas/MoneyAmount'
+        deltaPercent:
+          type: number
+          format: double
+
+    MoneyAmount:
+      type: string
+      pattern: '^-?[0-9]+(\.[0-9]{1,4})?$'
+      description: Decimal amount with up to 4 fractional digits.
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - errorCode
+        - message
+        - correlationId
+        - timestamp
+      properties:
+        errorCode:
+          type: string
+          enum:
+            - SO-SET-001
+            - SO-SET-002
+            - SO-SET-003
+            - SO-SET-004
+            - SO-SET-005
+            - SO-UPD-001
+            - SO-UPD-002
+            - SO-DEL-001
+            - SO-EXE-001
+            - SO-EXE-002
+            - NOTIFY-001
+            - NOTIFY-002
+            - STMT-001
+            - STMT-002
+            - INS-001
+            - AUTH-FEAT-001
+            - AUTH-FEAT-002
+            - SYS-FEAT-001
+        message:
+          type: string
+        correlationId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

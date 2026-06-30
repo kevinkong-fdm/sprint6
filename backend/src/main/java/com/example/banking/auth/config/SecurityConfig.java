@@ -39,7 +39,14 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/auth/**", "/actuator/health", "/v3/api-docs/**", "/swagger-ui/**").permitAll()
-                    .requestMatchers("/accounts/**", "/transfers/**").authenticated()
+                    .requestMatchers(
+                        "/accounts/**",
+                        "/transfers/**",
+                        "/standing-orders/**",
+                        "/notifications/**",
+                        "/statements/**",
+                        "/insights/**")
+                    .authenticated()
                         .anyRequest().authenticated())
                 .httpBasic(httpBasic -> httpBasic.disable())
                 .formLogin(form -> form.disable())

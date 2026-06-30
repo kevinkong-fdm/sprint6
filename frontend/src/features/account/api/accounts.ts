@@ -5,7 +5,7 @@ export type AccountStatus = "ACTIVE" | "PENDING_DELETE";
 
 export type CreateAccountRequest = {
   accountType: AccountType;
-  nickname?: string;
+  nickname: string;
 };
 
 export type UpdateAccountRequest = {

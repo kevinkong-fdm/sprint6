@@ -9,6 +9,12 @@
     color-scheme: dark;
   }
 
+  html {
+    min-height: 100%;
+    overflow-y: scroll;
+    scrollbar-gutter: stable;
+  }
+
   body {
     @apply m-0 min-h-screen bg-slate-950 text-slate-100 antialiased;
     font-family: "Manrope", "Segoe UI", sans-serif;

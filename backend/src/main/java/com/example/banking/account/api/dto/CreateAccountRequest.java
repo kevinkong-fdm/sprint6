@@ -5,6 +5,6 @@ import jakarta.validation.constraints.Size;
 
 public record CreateAccountRequest(
         @NotBlank String accountType,
-        @Size(min = 1, max = 80) String nickname
+        @NotBlank @Size(max = 80) String nickname
 ) {
 }
