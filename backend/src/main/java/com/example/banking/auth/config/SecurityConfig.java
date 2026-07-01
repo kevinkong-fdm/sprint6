@@ -43,7 +43,6 @@ public class SecurityConfig {
                         "/accounts/**",
                         "/transfers/**",
                         "/standing-orders/**",
-                        "/notifications/**",
                         "/statements/**",
                         "/insights/**")
                     .authenticated()

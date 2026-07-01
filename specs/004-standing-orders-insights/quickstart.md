@@ -1,4 +1,4 @@
-# Quickstart: Authenticated Standing Orders, Notifications, Statements, and Spending Insights
+# Quickstart: Authenticated Standing Orders, Statements, and Spending Insights
 
 This feature is scoped for local execution only.
 
@@ -18,8 +18,6 @@ Use this guide to validate behavior end-to-end against:
 - `POST /standing-orders/{standingOrderId}/cancel` -> Cancel standing order
 - `POST /standing-orders/{standingOrderId}/executions/trigger` -> Trigger execution attempt
 - `GET /standing-orders/{standingOrderId}/executions` -> List execution history
-- `GET /notifications/standing-orders` -> Retrieve standing-order notifications
-- `PATCH /notifications/preferences` -> Unsupported in this version (must return `NOTIFY-001`)
 - `POST /statements/monthly/generate` -> Generate monthly statement
 - `GET /statements/monthly` -> Retrieve monthly statement
 - `GET /insights/spending` -> Retrieve spending insights
@@ -56,7 +54,7 @@ cd backend
 ```
 
 Expected outcome:
-- Backend starts on `http://localhost:8080` with standing-order, notification, statement, and insight endpoints available.
+- Backend starts on `http://localhost:8080` with standing-order, statement, and insight endpoints available.
 
 4. Start frontend.
 
@@ -113,16 +111,7 @@ Expected:
 - Retry does not duplicate posting and returns prior result
 - Insufficient funds path returns `SO-EXE-001` and no partial posted state
 
-### Scenario 5: Notification retrieval and unsupported preference changes
-
-1. Retrieve notifications using `GET /notifications/standing-orders`.
-2. Attempt `PATCH /notifications/preferences`.
-
-Expected:
-- Retrieval returns ordered/paginated notification list
-- Preference update is rejected with `NOTIFY-001`
-
-### Scenario 6: Generate and retrieve monthly statements
+### Scenario 5: Generate and retrieve monthly statements
 
 1. Call `POST /statements/monthly/generate` for a valid closed month and owned account.
 2. Call `GET /statements/monthly` for the same month.
@@ -135,7 +124,7 @@ Expected:
 - No-activity month returns success with zeroed totals
 - Invalid/future month request returns `STMT-001`
 
-### Scenario 7: Spending insights with sufficient and insufficient history
+### Scenario 6: Spending insights with sufficient and insufficient history
 
 1. Call `GET /insights/spending` for valid period with historical data.
 2. Call same endpoint for valid period with insufficient history.
@@ -146,7 +135,7 @@ Expected:
 - Low-data case returns HTTP 200 with `insufficientData = true` and partial metrics
 - Invalid filters return `INS-001`
 
-### Scenario 8: Authentication and ownership guardrails
+### Scenario 7: Authentication and ownership guardrails
 
 1. Call representative endpoints without authentication token.
 2. Call representative endpoints for resources owned by another customer.

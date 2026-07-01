@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(basePackages = {
         "com.example.banking.standingorder",
-        "com.example.banking.notification",
         "com.example.banking.statement",
         "com.example.banking.insights"
 })
@@ -76,9 +75,6 @@ public class StandingOrderExceptionHandler {
         if (uri.startsWith("/standing-orders") && "PATCH".equalsIgnoreCase(request.getMethod())) {
             return "SO-UPD-001";
         }
-        if (uri.startsWith("/notifications/preferences")) {
-            return "NOTIFY-001";
-        }
         if (uri.startsWith("/statements/monthly")) {
             return "STMT-001";
         }
@@ -96,9 +92,6 @@ public class StandingOrderExceptionHandler {
         }
         if (uri.startsWith("/standing-orders") && "PATCH".equalsIgnoreCase(request.getMethod())) {
             return "Standing-order update validation failed.";
-        }
-        if (uri.startsWith("/notifications/preferences")) {
-            return "Notification preference update is not supported in this version.";
         }
         if (uri.startsWith("/statements/monthly")) {
             return "Monthly statement period validation failed.";

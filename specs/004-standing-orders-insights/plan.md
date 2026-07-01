@@ -1,4 +1,4 @@
-# Implementation Plan: Authenticated Standing Orders, Notifications, Statements, and Spending Insights
+# Implementation Plan: Authenticated Standing Orders, Statements, and Spending Insights
 
 **Branch**: `004-standing-orders-insights` | **Date**: 2026-06-29 | **Spec**: [spec.md](./spec.md)
 
@@ -6,7 +6,7 @@
 
 ## Summary
 
-Deliver authenticated standing-order setup/lifecycle management, execution-trigger notifications, monthly statement generation, and spending insights under the current Spring Boot + React + MySQL stack. The design enforces clarified policy constraints: notifications are default-on and immutable in this version, spending insights return deterministic low-data success payloads when history is insufficient, schedule and month attribution use fixed AEST (UTC+10:00), and standing-order destination accounts are internal-only and must be owned by the same authenticated customer as the source account. This increment is scoped to local execution only.
+Deliver authenticated standing-order setup/lifecycle management, monthly statement generation, and spending insights under the current Spring Boot + React + MySQL stack. The design enforces clarified policy constraints: spending insights return deterministic low-data success payloads when history is insufficient, schedule and month attribution use fixed AEST (UTC+10:00), and standing-order destination accounts are internal-only and must be owned by the same authenticated customer as the source account. This increment is scoped to local execution only.
 
 ## Technical Context
 
@@ -30,13 +30,11 @@ Deliver authenticated standing-order setup/lifecycle management, execution-trigg
 **Performance Goals**:
 - Standing-order execution outcomes processed within the local validation threshold from the spec (5 minutes)
 - Statement generation responses complete within 10 seconds for local representative datasets
-- Notification records become queryable within 1 minute of execution outcome creation in local runs
 
 **Constraints**:
 - Authentication and ownership authorization are mandatory for every operation
 - Standing-order destinations are limited to internal platform account IDs owned by the same authenticated customer
 - Platform timezone is fixed to AEST (UTC+10:00) for schedule due-time checks and month-boundary attribution
-- Notifications remain fixed default-on and cannot be modified by customers
 - Execution and posting logic must avoid partial financial state on failure
 - Sensitive financial and identity data must not leak through logs, errors, statements, insights, or telemetry
 - Project only needs to work locally for this iteration
@@ -86,7 +84,6 @@ backend/
 │   │   │   ├── customer/
 │   │   │   ├── account/
 │   │   │   ├── standingorder/
-│   │   │   ├── notification/
 │   │   │   ├── statement/
 │   │   │   └── insights/
 │   │   └── resources/
@@ -94,7 +91,6 @@ backend/
 │   └── test/
 │       └── java/com/example/banking/
 │           ├── standingorder/
-│           ├── notification/
 │           ├── statement/
 │           └── insights/
 └── pom.xml
@@ -105,7 +101,6 @@ frontend/
 │   ├── app/
 │   └── features/
 │       ├── standing-orders/
-│       ├── notifications/
 │       ├── statements/
 │       └── insights/
 └── package.json
@@ -114,7 +109,7 @@ specs/
 └── 004-standing-orders-insights/
 ```
 
-**Structure Decision**: Keep the existing backend + frontend split, deliver backend-first OpenAPI contract updates for standing orders/notifications/statements/insights, and wire frontend integration to generated typed clients from the new feature contract.
+**Structure Decision**: Keep the existing backend + frontend split, deliver backend-first OpenAPI contract updates for standing orders/statements/insights, and wire frontend integration to generated typed clients from the new feature contract.
 
 ## Complexity Tracking
 

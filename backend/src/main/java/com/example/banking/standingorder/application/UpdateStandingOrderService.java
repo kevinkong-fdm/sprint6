@@ -1,6 +1,5 @@
 package com.example.banking.standingorder.application;
 
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.UpdateStandingOrderRequest;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderFrequency;
@@ -19,20 +18,17 @@ public class UpdateStandingOrderService {
     private final StandingOrderAuthorizationService standingOrderAuthorizationService;
     private final PlatformTimezoneService platformTimezoneService;
     private final StandingOrderRepository standingOrderRepository;
-    private final StandingOrderNotificationService standingOrderNotificationService;
     private final StandingOrderAuditService standingOrderAuditService;
 
     public UpdateStandingOrderService(
             StandingOrderAuthorizationService standingOrderAuthorizationService,
             PlatformTimezoneService platformTimezoneService,
             StandingOrderRepository standingOrderRepository,
-            StandingOrderNotificationService standingOrderNotificationService,
             StandingOrderAuditService standingOrderAuditService
     ) {
         this.standingOrderAuthorizationService = standingOrderAuthorizationService;
         this.platformTimezoneService = platformTimezoneService;
         this.standingOrderRepository = standingOrderRepository;
-        this.standingOrderNotificationService = standingOrderNotificationService;
         this.standingOrderAuditService = standingOrderAuditService;
     }
 
@@ -122,7 +118,6 @@ public class UpdateStandingOrderService {
                 nextExecutionAt);
 
         StandingOrderEntity saved = standingOrderRepository.save(standingOrder);
-        standingOrderNotificationService.publishLifecycleUpdate(saved, "UPDATE", correlationId);
         standingOrderAuditService.auditLifecycle(saved.getStandingOrderId(), resolvedActorId, "UPDATE", correlationId);
         return saved;
     }

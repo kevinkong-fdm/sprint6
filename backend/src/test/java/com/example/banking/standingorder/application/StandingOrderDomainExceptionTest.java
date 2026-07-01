@@ -20,8 +20,6 @@ class StandingOrderDomainExceptionTest {
         assertException(new StandingOrderDomainException.StandingOrderNotFoundException(), "SO-DEL-001", 404);
         assertException(new StandingOrderDomainException.ExecutionInsufficientFundsException(), "SO-EXE-001", 409);
         assertException(new StandingOrderDomainException.ExecutionSkippedException(), "SO-EXE-002", 409);
-        assertException(new StandingOrderDomainException.NotificationPreferenceUnsupportedException(), "NOTIFY-001", 409);
-        assertException(new StandingOrderDomainException.NotificationDispatchFailedException(), "NOTIFY-002", 500);
         assertException(new StandingOrderDomainException.StatementValidationException(), "STMT-001", 400);
         assertException(new StandingOrderDomainException.StatementUnavailableException(), "STMT-002", 404);
         assertException(new StandingOrderDomainException.InsightsValidationException(), "INS-001", 400);

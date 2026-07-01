@@ -1,11 +1,10 @@
 openapi: 3.1.0
 info:
-  title: Authenticated Standing Orders, Notifications, Statements, and Spending Insights API
+  title: Authenticated Standing Orders, Statements, and Spending Insights API
   version: 1.0.0
   description: >-
     Contract for local-only authenticated standing-order setup and lifecycle,
-    standing-order notifications, monthly statement generation/retrieval, and
-    spending insights.
+    monthly statement generation/retrieval, and spending insights.
 servers:
   - url: http://localhost:8080
 security:
@@ -22,7 +21,6 @@ x-idempotency:
 
 tags:
   - name: StandingOrders
-  - name: Notifications
   - name: Statements
   - name: Insights
 
@@ -447,85 +445,6 @@ paths:
         '500':
           $ref: '#/components/responses/UnexpectedError'
 
-  /notifications/standing-orders:
-    get:
-      tags: [Notifications]
-      summary: Retrieve standing-order notifications
-      operationId: listStandingOrderNotifications
-      description: >-
-        Returns notifications ordered by `createdAt` descending then
-        `notificationEventId` descending.
-      parameters:
-        - in: query
-          name: eventType
-          required: false
-          schema:
-            type: string
-            enum: [LIFECYCLE_UPDATED, EXECUTION_SUCCESS, EXECUTION_FAILURE, EXECUTION_SKIPPED]
-        - in: query
-          name: dispatchStatus
-          required: false
-          schema:
-            type: string
-            enum: [PENDING, SENT, FAILED]
-        - $ref: '#/components/parameters/PageParam'
-        - $ref: '#/components/parameters/SizeParam'
-      responses:
-        '200':
-          description: Notifications listed
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationListResponse'
-        '401':
-          $ref: '#/components/responses/UnauthenticatedError'
-        '500':
-          description: Notification dispatch subsystem error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                dispatchFailure:
-                  value:
-                    errorCode: NOTIFY-002
-                    message: Notification dispatch failed after retry policy.
-                    correlationId: corr-123
-                    timestamp: '2026-06-29T10:00:00Z'
-
-  /notifications/preferences:
-    patch:
-      tags: [Notifications]
-      summary: Update notification preferences (unsupported)
-      operationId: updateNotificationPreferences
-      description: >-
-        Notifications are fixed default-on in this version. Preference updates
-        are intentionally unsupported.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationPreferenceUpdateRequest'
-      responses:
-        '409':
-          description: Preference update not supported
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-              examples:
-                fixedPreferences:
-                  value:
-                    errorCode: NOTIFY-001
-                    message: Notification preference update is not supported in this version.
-                    correlationId: corr-123
-                    timestamp: '2026-06-29T10:00:00Z'
-        '401':
-          $ref: '#/components/responses/UnauthenticatedError'
-        '500':
-          $ref: '#/components/responses/UnexpectedError'
-
   /statements/monthly/generate:
     post:
       tags: [Statements]
@@ -871,32 +790,6 @@ components:
             total:
               type: integer
 
-    NotificationListResponse:
-      type: object
-      additionalProperties: false
-      required: [correlationId, timestamp, data]
-      properties:
-        correlationId:
-          type: string
-        timestamp:
-          type: string
-          format: date-time
-        data:
-          type: object
-          additionalProperties: false
-          required: [items, page, size, total]
-          properties:
-            items:
-              type: array
-              items:
-                $ref: '#/components/schemas/NotificationEvent'
-            page:
-              type: integer
-            size:
-              type: integer
-            total:
-              type: integer
-
     MonthlyStatementSingleResponse:
       type: object
       additionalProperties: false
@@ -1003,15 +896,6 @@ components:
         reason:
           type: string
           maxLength: 300
-
-    NotificationPreferenceUpdateRequest:
-      type: object
-      additionalProperties: false
-      properties:
-        standingOrderNotificationsEnabled:
-          type: boolean
-      required:
-        - standingOrderNotificationsEnabled
 
     GenerateMonthlyStatementRequest:
       type: object
@@ -1131,49 +1015,6 @@ components:
           format: uuid
         correlationId:
           type: string
-
-    NotificationEvent:
-      type: object
-      additionalProperties: false
-      required:
-        - notificationEventId
-        - eventType
-        - title
-        - message
-        - dispatchStatus
-        - createdAt
-      properties:
-        notificationEventId:
-          type: string
-          format: uuid
-        standingOrderId:
-          type: string
-          format: uuid
-        standingOrderExecutionId:
-          type: string
-          format: uuid
-        eventType:
-          type: string
-          enum: [LIFECYCLE_UPDATED, EXECUTION_SUCCESS, EXECUTION_FAILURE, EXECUTION_SKIPPED]
-        title:
-          type: string
-          maxLength: 140
-        message:
-          type: string
-          maxLength: 1000
-        dispatchStatus:
-          type: string
-          enum: [PENDING, SENT, FAILED]
-        dispatchAttemptCount:
-          type: integer
-          minimum: 0
-        createdAt:
-          type: string
-          format: date-time
-        dispatchedAt:
-          type: string
-          format: date-time
-          nullable: true
 
     MonthlyStatement:
       type: object
@@ -1343,8 +1184,6 @@ components:
             - SO-DEL-001
             - SO-EXE-001
             - SO-EXE-002
-            - NOTIFY-001
-            - NOTIFY-002
             - STMT-001
             - STMT-002
             - INS-001

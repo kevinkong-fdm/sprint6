@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.example.banking.account.domain.AccountType;
 import com.example.banking.account.domain.BankAccountEntity;
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.UpdateStandingOrderRequest;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderFrequency;
@@ -37,9 +36,6 @@ class UpdateStandingOrderServiceTest {
     private StandingOrderRepository standingOrderRepository;
 
     @Mock
-    private StandingOrderNotificationService standingOrderNotificationService;
-
-    @Mock
     private StandingOrderAuditService standingOrderAuditService;
 
     private UpdateStandingOrderService service;
@@ -50,7 +46,6 @@ class UpdateStandingOrderServiceTest {
                 standingOrderAuthorizationService,
                 platformTimezoneService,
                 standingOrderRepository,
-                standingOrderNotificationService,
                 standingOrderAuditService);
     }
 
@@ -163,7 +158,6 @@ class UpdateStandingOrderServiceTest {
         assertEquals("dst-2", updated.getDestinationAccountId());
         assertEquals(new BigDecimal("22.0000"), updated.getAmount());
         assertEquals(StandingOrderFrequency.WEEKLY, updated.getFrequency());
-        verify(standingOrderNotificationService).publishLifecycleUpdate(updated, "UPDATE", "corr-1");
         verify(standingOrderAuditService).auditLifecycle(updated.getStandingOrderId(), "cust-1", "UPDATE", "corr-1");
     }
 

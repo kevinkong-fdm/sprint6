@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderFrequency;
 import com.example.banking.standingorder.domain.StandingOrderStatus;
@@ -35,9 +34,6 @@ class StandingOrderLifecycleServiceTest {
     private StandingOrderRepository standingOrderRepository;
 
     @Mock
-    private StandingOrderNotificationService standingOrderNotificationService;
-
-    @Mock
     private StandingOrderAuditService standingOrderAuditService;
 
     private StandingOrderLifecycleService service;
@@ -48,7 +44,6 @@ class StandingOrderLifecycleServiceTest {
                 standingOrderAuthorizationService,
                 platformTimezoneService,
                 standingOrderRepository,
-                standingOrderNotificationService,
                 standingOrderAuditService);
     }
 
@@ -63,7 +58,6 @@ class StandingOrderLifecycleServiceTest {
         StandingOrderEntity paused = service.pause("so-1", "actor-1", "corr-1");
 
         assertEquals(StandingOrderStatus.PAUSED, paused.getStatus());
-        verify(standingOrderNotificationService).publishLifecycleUpdate(paused, "PAUSE", "corr-1");
         verify(standingOrderAuditService).auditLifecycle("so-1", "cust-1", "PAUSE", "corr-1");
     }
 
@@ -89,7 +83,6 @@ class StandingOrderLifecycleServiceTest {
 
         assertEquals(StandingOrderStatus.ACTIVE, resumed.getStatus());
         assertEquals(Instant.parse("2026-06-09T00:00:00Z"), resumed.getNextExecutionAt());
-        verify(standingOrderNotificationService).publishLifecycleUpdate(resumed, "RESUME", "corr-1");
         verify(standingOrderAuditService).auditLifecycle("so-1", "cust-1", "RESUME", "corr-1");
     }
 
@@ -105,7 +98,6 @@ class StandingOrderLifecycleServiceTest {
 
         assertEquals(StandingOrderStatus.CANCELED, canceled.getStatus());
         assertEquals(null, canceled.getNextExecutionAt());
-        verify(standingOrderNotificationService).publishLifecycleUpdate(canceled, "CANCEL", "corr-1");
         verify(standingOrderAuditService).auditLifecycle("so-1", "cust-1", "CANCEL", "corr-1");
     }
 

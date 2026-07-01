@@ -1,4 +1,4 @@
-# Research: Authenticated Standing Orders, Notifications, Statements, and Spending Insights
+# Research: Authenticated Standing Orders, Statements, and Spending Insights
 
 ## Decision 1: Delivery scope and runtime boundary
 
@@ -36,25 +36,19 @@
 - Rationale: Enforces no-partial-state guardrail and keeps audit trails consistent.
 - Alternatives considered: Multi-step best-effort posting (partial state risk), asynchronous compensation workflow (unnecessary complexity for local scope).
 
-## Decision 7: Notification behavior and preference policy
-
-- Decision: Represent notification preferences as system-managed default-on state and reject preference modification requests with `NOTIFY-001`.
-- Rationale: Satisfies fixed-notification policy while preserving explicit API behavior for unsupported preference updates.
-- Alternatives considered: User-configurable channels in v1 (contradicts clarification), no preference resource at all (weak contract clarity for rejected updates).
-
-## Decision 8: Monthly statement generation strategy
+## Decision 7: Monthly statement generation strategy
 
 - Decision: Generate per-account, per-month statements from posted ledger activity, always returning a valid statement shape for closed months, including empty-activity months.
 - Rationale: Meets statement completeness requirements and avoids null/partial statement payloads.
 - Alternatives considered: Error on no-activity months (contradicts FR-017), precomputed monthly snapshots only (higher operational complexity for this scope).
 
-## Decision 9: Spending-insight low-data behavior
+## Decision 8: Spending-insight low-data behavior
 
 - Decision: Return HTTP success with a deterministic `insufficientData` indicator and partial metrics when historical data is valid but inadequate for full comparison.
 - Rationale: Matches clarification and enables UI to degrade gracefully without error handling branches.
 - Alternatives considered: Error response on low data (explicitly rejected), suppressing comparison fields entirely (reduces deterministic contract behavior).
 
-## Decision 10: Contract and validation gates
+## Decision 9: Contract and validation gates
 
 - Decision: Keep OpenAPI as the authoritative interface with deterministic error-code mappings and local contract/integration test gates before implementation tasks.
 - Rationale: Prevents spec drift and ensures all clarified constraints are testable.

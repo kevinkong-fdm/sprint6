@@ -5,7 +5,6 @@ import com.example.banking.account.api.dto.TransferResponse;
 import com.example.banking.account.application.TransferFundsService;
 import com.example.banking.account.domain.AccountStatus;
 import com.example.banking.account.domain.BankAccountEntity;
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.StandingOrderExecutionListResponse;
 import com.example.banking.standingorder.api.dto.StandingOrderExecutionResponse;
 import com.example.banking.standingorder.api.dto.StandingOrderResponseMapper;
@@ -34,7 +33,6 @@ public class StandingOrderExecutionService {
     private final StandingOrderExecutionRepository standingOrderExecutionRepository;
     private final StandingOrderRepository standingOrderRepository;
     private final StandingOrderResponseMapper standingOrderResponseMapper;
-    private final StandingOrderNotificationService standingOrderNotificationService;
     private final StandingOrderAuditService standingOrderAuditService;
 
     public StandingOrderExecutionService(
@@ -45,7 +43,6 @@ public class StandingOrderExecutionService {
             StandingOrderExecutionRepository standingOrderExecutionRepository,
             StandingOrderRepository standingOrderRepository,
             StandingOrderResponseMapper standingOrderResponseMapper,
-            StandingOrderNotificationService standingOrderNotificationService,
             StandingOrderAuditService standingOrderAuditService
     ) {
         this.standingOrderAuthorizationService = standingOrderAuthorizationService;
@@ -55,7 +52,6 @@ public class StandingOrderExecutionService {
         this.standingOrderExecutionRepository = standingOrderExecutionRepository;
         this.standingOrderRepository = standingOrderRepository;
         this.standingOrderResponseMapper = standingOrderResponseMapper;
-        this.standingOrderNotificationService = standingOrderNotificationService;
         this.standingOrderAuditService = standingOrderAuditService;
     }
 
@@ -90,7 +86,6 @@ public class StandingOrderExecutionService {
                     null,
                     normalizedIdempotencyKey,
                     correlationId));
-            standingOrderNotificationService.publishExecutionOutcome(standingOrder, execution, correlationId);
             standingOrderAuditService.auditLifecycle(standingOrder.getStandingOrderId(), resolvedActorId, "EXECUTION_SKIPPED", correlationId);
                     throw new StandingOrderDomainException.ExecutionSkippedException(
                         "Execution skipped because this standing order is not active. Resume it before triggering execution.");
@@ -109,7 +104,6 @@ public class StandingOrderExecutionService {
                     null,
                     normalizedIdempotencyKey,
                     correlationId));
-            standingOrderNotificationService.publishExecutionOutcome(standingOrder, execution, correlationId);
             standingOrderAuditService.auditLifecycle(standingOrder.getStandingOrderId(), resolvedActorId, "EXECUTION_SKIPPED", correlationId);
                     throw new StandingOrderDomainException.ExecutionSkippedException(
                         "Execution skipped because the source account is not active.");
@@ -126,7 +120,6 @@ public class StandingOrderExecutionService {
                     correlationId));
             standingOrder.markExecuted(Instant.now(), platformTimezoneService.computeNextExecutionAfterRun(standingOrder, Instant.now()));
             standingOrderRepository.save(standingOrder);
-            standingOrderNotificationService.publishExecutionOutcome(standingOrder, execution, correlationId);
             standingOrderAuditService.auditLifecycle(standingOrder.getStandingOrderId(), resolvedActorId, "EXECUTION_FAILED", correlationId);
             throw new StandingOrderDomainException.ExecutionInsufficientFundsException();
         }
@@ -151,7 +144,6 @@ public class StandingOrderExecutionService {
 
         standingOrder.markExecuted(Instant.now(), platformTimezoneService.computeNextExecutionAfterRun(standingOrder, Instant.now()));
         standingOrderRepository.save(standingOrder);
-        standingOrderNotificationService.publishExecutionOutcome(standingOrder, execution, correlationId);
         standingOrderAuditService.auditLifecycle(standingOrder.getStandingOrderId(), resolvedActorId, "EXECUTION_SUCCESS", correlationId);
 
         return execution;

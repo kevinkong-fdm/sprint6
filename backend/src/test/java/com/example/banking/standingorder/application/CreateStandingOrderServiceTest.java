@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 
 import com.example.banking.account.domain.AccountType;
 import com.example.banking.account.domain.BankAccountEntity;
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.CreateStandingOrderRequest;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderFrequency;
@@ -45,9 +44,6 @@ class CreateStandingOrderServiceTest {
     private StandingOrderIdempotencyService standingOrderIdempotencyService;
 
     @Mock
-    private StandingOrderNotificationService standingOrderNotificationService;
-
-    @Mock
     private StandingOrderAuditService standingOrderAuditService;
 
     private CreateStandingOrderService service;
@@ -59,7 +55,6 @@ class CreateStandingOrderServiceTest {
                 platformTimezoneService,
                 standingOrderRepository,
                 standingOrderIdempotencyService,
-                standingOrderNotificationService,
                 standingOrderAuditService);
     }
 
@@ -77,7 +72,6 @@ class CreateStandingOrderServiceTest {
 
         assertSame(existing, result);
         verify(standingOrderRepository, never()).save(any(StandingOrderEntity.class));
-        verify(standingOrderNotificationService, never()).publishLifecycleUpdate(any(), any(), any());
     }
 
     @Test
@@ -114,7 +108,6 @@ class CreateStandingOrderServiceTest {
         verify(standingOrderRepository).save(savedCaptor.capture());
         assertEquals(1, savedCaptor.getValue().getExecutionDayOfMonth());
 
-        verify(standingOrderNotificationService).publishLifecycleUpdate(result, "CREATE", "corr-1");
         verify(standingOrderAuditService).auditLifecycle(result.getStandingOrderId(), "cust-1", "CREATE", "corr-1");
     }
 

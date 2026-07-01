@@ -137,7 +137,6 @@
                                 <include>**/customer/contract/*ContractTest.java</include>
                                 <include>**/account/contract/*ContractTest.java</include>
                                 <include>**/standingorder/contract/*ContractTest.java</include>
-                                <include>**/notification/contract/*ContractTest.java</include>
                                 <include>**/statement/contract/*ContractTest.java</include>
                                 <include>**/insights/contract/*ContractTest.java</include>
                                 <include>**/*ContractTest.java</include>

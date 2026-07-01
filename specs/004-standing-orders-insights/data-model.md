@@ -1,4 +1,4 @@
-# Data Model: Authenticated Standing Orders, Notifications, Statements, and Spending Insights
+# Data Model: Authenticated Standing Orders, Statements, and Spending Insights
 
 All persisted entities are stored in local MySQL 8.x for this feature increment.
 
@@ -48,44 +48,6 @@ Validation rules:
 Validation rules:
 - Exactly one execution outcome per standing-order due cycle.
 - Failed and skipped outcomes must not create partial posted money movements.
-
-## Entity: NotificationPreference
-
-- Purpose: System-managed notification policy for standing-order events.
-
-| Field | Type | Constraints | Notes |
-|---|---|---|---|
-| customer_id | UUID | Primary key | One policy row per customer |
-| standing_order_notifications_enabled | BOOLEAN | Required, default true | Fixed true in this version |
-| managed_by_system | BOOLEAN | Required, default true | Prevents customer mutation |
-| created_at | TIMESTAMP | Required | Creation audit time |
-| updated_at | TIMESTAMP | Required | Last update audit time |
-
-Validation rules:
-- Customer-facing update attempts are rejected with `NOTIFY-001`.
-
-## Entity: NotificationEvent
-
-- Purpose: Customer-visible standing-order lifecycle and execution notifications.
-
-| Field | Type | Constraints | Notes |
-|---|---|---|---|
-| notification_event_id | UUID | Primary key | Notification identifier |
-| customer_id | UUID | Required, indexed | Notification recipient |
-| standing_order_id | UUID | Nullable | Related standing order |
-| standing_order_execution_id | UUID | Nullable | Related execution attempt |
-| event_type | ENUM(LIFECYCLE_UPDATED, EXECUTION_SUCCESS, EXECUTION_FAILURE, EXECUTION_SKIPPED) | Required | Notification category |
-| title | VARCHAR(140) | Required | User-safe summary |
-| message | VARCHAR(1000) | Required | User-safe notification body |
-| dispatch_status | ENUM(PENDING, SENT, FAILED) | Required | Dispatch outcome status |
-| dispatch_attempt_count | INTEGER | Required, min 0 | Retry traceability |
-| correlation_id | VARCHAR(64) | Required | Traceability identifier |
-| created_at | TIMESTAMP | Required | Event creation time |
-| dispatched_at | TIMESTAMP | Nullable | Timestamp when marked SENT |
-
-Validation rules:
-- Duplicate visible notifications for the same execution outcome are not allowed.
-- Failed dispatch after retry policy maps to `NOTIFY-002`.
 
 ## Entity: MonthlyStatement
 
@@ -176,8 +138,6 @@ Validation rules:
 ## Relationships
 
 - StandingOrder 1..* StandingOrderExecution
-- StandingOrder 1..* NotificationEvent
-- NotificationPreference 1..* NotificationEvent (by customer)
 - MonthlyStatement 1..* StatementLineItem
 - SpendingInsightSnapshot 1..* SpendingCategoryMetric
 - Customer ownership (`customer_id`) anchors access control across all entities
@@ -198,12 +158,6 @@ Validation rules:
 - `TRIGGERED -> FAILED`
 - `TRIGGERED -> SKIPPED`
 - Final outcome is immutable once set
-
-### NotificationEvent
-
-- `PENDING -> SENT`
-- `PENDING -> FAILED`
-- `FAILED -> SENT` (retry success)
 
 ## Invariants
 

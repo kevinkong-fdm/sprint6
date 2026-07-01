@@ -1,6 +1,5 @@
 package com.example.banking.standingorder.application;
 
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderStatus;
 import com.example.banking.standingorder.infrastructure.StandingOrderRepository;
@@ -13,20 +12,17 @@ public class StandingOrderLifecycleService {
     private final StandingOrderAuthorizationService standingOrderAuthorizationService;
     private final PlatformTimezoneService platformTimezoneService;
     private final StandingOrderRepository standingOrderRepository;
-    private final StandingOrderNotificationService standingOrderNotificationService;
     private final StandingOrderAuditService standingOrderAuditService;
 
     public StandingOrderLifecycleService(
             StandingOrderAuthorizationService standingOrderAuthorizationService,
             PlatformTimezoneService platformTimezoneService,
             StandingOrderRepository standingOrderRepository,
-            StandingOrderNotificationService standingOrderNotificationService,
             StandingOrderAuditService standingOrderAuditService
     ) {
         this.standingOrderAuthorizationService = standingOrderAuthorizationService;
         this.platformTimezoneService = platformTimezoneService;
         this.standingOrderRepository = standingOrderRepository;
-        this.standingOrderNotificationService = standingOrderNotificationService;
         this.standingOrderAuditService = standingOrderAuditService;
     }
 
@@ -44,7 +40,6 @@ public class StandingOrderLifecycleService {
         }
 
         StandingOrderEntity saved = standingOrderRepository.save(standingOrder);
-        standingOrderNotificationService.publishLifecycleUpdate(saved, "PAUSE", correlationId);
         standingOrderAuditService.auditLifecycle(saved.getStandingOrderId(), resolvedActorId, "PAUSE", correlationId);
         return saved;
     }
@@ -70,7 +65,6 @@ public class StandingOrderLifecycleService {
         }
 
         StandingOrderEntity saved = standingOrderRepository.save(standingOrder);
-        standingOrderNotificationService.publishLifecycleUpdate(saved, "RESUME", correlationId);
         standingOrderAuditService.auditLifecycle(saved.getStandingOrderId(), resolvedActorId, "RESUME", correlationId);
         return saved;
     }
@@ -85,7 +79,6 @@ public class StandingOrderLifecycleService {
         }
 
         StandingOrderEntity saved = standingOrderRepository.save(standingOrder);
-        standingOrderNotificationService.publishLifecycleUpdate(saved, "CANCEL", correlationId);
         standingOrderAuditService.auditLifecycle(saved.getStandingOrderId(), resolvedActorId, "CANCEL", correlationId);
         return saved;
     }

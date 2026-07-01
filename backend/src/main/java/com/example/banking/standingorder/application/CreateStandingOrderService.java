@@ -1,6 +1,5 @@
 package com.example.banking.standingorder.application;
 
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.CreateStandingOrderRequest;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderFrequency;
@@ -19,7 +18,6 @@ public class CreateStandingOrderService {
     private final PlatformTimezoneService platformTimezoneService;
     private final StandingOrderRepository standingOrderRepository;
     private final StandingOrderIdempotencyService standingOrderIdempotencyService;
-    private final StandingOrderNotificationService standingOrderNotificationService;
     private final StandingOrderAuditService standingOrderAuditService;
 
     public CreateStandingOrderService(
@@ -27,14 +25,12 @@ public class CreateStandingOrderService {
             PlatformTimezoneService platformTimezoneService,
             StandingOrderRepository standingOrderRepository,
             StandingOrderIdempotencyService standingOrderIdempotencyService,
-            StandingOrderNotificationService standingOrderNotificationService,
             StandingOrderAuditService standingOrderAuditService
     ) {
         this.standingOrderAuthorizationService = standingOrderAuthorizationService;
         this.platformTimezoneService = platformTimezoneService;
         this.standingOrderRepository = standingOrderRepository;
         this.standingOrderIdempotencyService = standingOrderIdempotencyService;
-        this.standingOrderNotificationService = standingOrderNotificationService;
         this.standingOrderAuditService = standingOrderAuditService;
     }
 
@@ -115,7 +111,6 @@ public class CreateStandingOrderService {
                 platformTimezoneService.timezoneCode(),
                 normalizedIdempotencyKey));
 
-        standingOrderNotificationService.publishLifecycleUpdate(saved, "CREATE", correlationId);
         standingOrderAuditService.auditLifecycle(saved.getStandingOrderId(), resolvedActorId, "CREATE", correlationId);
 
         return saved;

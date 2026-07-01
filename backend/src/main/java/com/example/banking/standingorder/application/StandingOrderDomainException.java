@@ -107,18 +107,6 @@ public class StandingOrderDomainException extends RuntimeException {
         }
     }
 
-    public static final class NotificationPreferenceUnsupportedException extends StandingOrderDomainException {
-        public NotificationPreferenceUnsupportedException() {
-            super("NOTIFY-001", "Notification preference update is not supported in this version.", 409);
-        }
-    }
-
-    public static final class NotificationDispatchFailedException extends StandingOrderDomainException {
-        public NotificationDispatchFailedException() {
-            super("NOTIFY-002", "Notification dispatch failed after retry policy.", 500);
-        }
-    }
-
     public static final class StatementValidationException extends StandingOrderDomainException {
         public StatementValidationException() {
             this("Monthly statement period validation failed.");

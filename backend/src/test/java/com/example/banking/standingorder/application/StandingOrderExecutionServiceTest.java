@@ -14,7 +14,6 @@ import com.example.banking.account.application.TransferFundsService;
 import com.example.banking.account.domain.AccountStatus;
 import com.example.banking.account.domain.AccountType;
 import com.example.banking.account.domain.BankAccountEntity;
-import com.example.banking.notification.application.StandingOrderNotificationService;
 import com.example.banking.standingorder.api.dto.StandingOrderResponseMapper;
 import com.example.banking.standingorder.domain.StandingOrderEntity;
 import com.example.banking.standingorder.domain.StandingOrderExecutionEntity;
@@ -56,9 +55,6 @@ class StandingOrderExecutionServiceTest {
     private StandingOrderRepository standingOrderRepository;
 
     @Mock
-    private StandingOrderNotificationService standingOrderNotificationService;
-
-    @Mock
     private StandingOrderAuditService standingOrderAuditService;
 
     private StandingOrderExecutionService service;
@@ -73,7 +69,6 @@ class StandingOrderExecutionServiceTest {
                 standingOrderExecutionRepository,
                 standingOrderRepository,
                 new StandingOrderResponseMapper(),
-                standingOrderNotificationService,
                 standingOrderAuditService);
     }
 
@@ -113,7 +108,6 @@ class StandingOrderExecutionServiceTest {
                 StandingOrderDomainException.ExecutionSkippedException.class,
                 () -> service.trigger("so-1", null, "actor-1", "corr-1"));
 
-        verify(standingOrderNotificationService).publishExecutionOutcome(eq(paused), any(), eq("corr-1"));
         verify(standingOrderAuditService).auditLifecycle("so-1", "cust-1", "EXECUTION_SKIPPED", "corr-1");
         verify(standingOrderAuthorizationService, never()).requireOwnedSourceAccount(any(), any());
     }
@@ -157,7 +151,6 @@ class StandingOrderExecutionServiceTest {
                 () -> service.trigger("so-1", null, "actor-1", "corr-1"));
 
         verify(standingOrderRepository).save(any(StandingOrderEntity.class));
-        verify(standingOrderNotificationService).publishExecutionOutcome(eq(standingOrder), any(), eq("corr-1"));
     }
 
     @Test
@@ -182,7 +175,6 @@ class StandingOrderExecutionServiceTest {
 
         assertEquals(StandingOrderExecutionOutcome.SUCCESS, result.getOutcome());
         assertEquals("trf-1", result.getTransferReferenceId());
-        verify(standingOrderNotificationService).publishExecutionOutcome(eq(standingOrder), any(), eq("corr-1"));
         verify(standingOrderAuditService).auditLifecycle("so-1", "cust-1", "EXECUTION_SUCCESS", "corr-1");
     }
 
