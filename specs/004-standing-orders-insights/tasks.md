@@ -70,10 +70,10 @@
 
 ### Tests for User Story 1
 
-- [ ] T037 [P] [US1] Add contract tests for create/list/get standing orders in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderCreateListGetContractTest.java
-- [ ] T038 [P] [US1] Add contract tests for update and lifecycle transitions in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderUpdateLifecycleContractTest.java
-- [ ] T039 [P] [US1] Add contract tests for destination-validation failures in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderDestinationValidationContractTest.java
-- [ ] T040 [P] [US1] Add integration test for create-update-pause-resume-cancel flow in backend/src/test/java/com/example/banking/standingorder/integration/StandingOrderLifecycleIntegrationTest.java
+- [X] T037 [P] [US1] Add contract tests for create/list/get standing orders in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderCreateListGetContractTest.java
+- [X] T038 [P] [US1] Add contract tests for update and lifecycle transitions in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderUpdateLifecycleContractTest.java
+- [X] T039 [P] [US1] Add contract tests for destination-validation failures in backend/src/test/java/com/example/banking/standingorder/contract/StandingOrderDestinationValidationContractTest.java
+- [X] T040 [P] [US1] Add integration test for create-update-pause-resume-cancel flow in backend/src/test/java/com/example/banking/standingorder/integration/StandingOrderLifecycleIntegrationTest.java
 
 ### Implementation for User Story 1
 
@@ -100,9 +100,9 @@
 
 ### Tests for User Story 2
 
-- [ ] T051 [P] [US2] Add contract tests for standing-order notifications listing in backend/src/test/java/com/example/banking/notification/contract/StandingOrderNotificationListContractTest.java
-- [ ] T052 [P] [US2] Add contract test for unsupported preference update endpoint in backend/src/test/java/com/example/banking/notification/contract/NotificationPreferenceUpdateUnsupportedContractTest.java
-- [ ] T053 [P] [US2] Add integration test for notification event generation and dispatch status transitions in backend/src/test/java/com/example/banking/notification/integration/NotificationDispatchIntegrationTest.java
+- [X] T051 [P] [US2] Add contract tests for standing-order notifications listing in backend/src/test/java/com/example/banking/notification/contract/StandingOrderNotificationListContractTest.java
+- [X] T052 [P] [US2] Add contract test for unsupported preference update endpoint in backend/src/test/java/com/example/banking/notification/contract/NotificationPreferenceUpdateUnsupportedContractTest.java
+- [X] T053 [P] [US2] Add integration test for notification event generation and dispatch status transitions in backend/src/test/java/com/example/banking/notification/integration/NotificationDispatchIntegrationTest.java
 
 ### Implementation for User Story 2
 
@@ -128,9 +128,9 @@
 
 ### Tests for User Story 3
 
-- [ ] T063 [P] [US3] Add contract tests for monthly statement generation and retrieval in backend/src/test/java/com/example/banking/statement/contract/MonthlyStatementContractTest.java
-- [ ] T064 [P] [US3] Add contract tests for statement validation and authorization failures in backend/src/test/java/com/example/banking/statement/contract/MonthlyStatementValidationContractTest.java
-- [ ] T065 [P] [US3] Add integration test for statement month-boundary attribution in AEST in backend/src/test/java/com/example/banking/statement/integration/MonthlyStatementTimezoneIntegrationTest.java
+- [X] T063 [P] [US3] Add contract tests for monthly statement generation and retrieval in backend/src/test/java/com/example/banking/statement/contract/MonthlyStatementContractTest.java
+- [X] T064 [P] [US3] Add contract tests for statement validation and authorization failures in backend/src/test/java/com/example/banking/statement/contract/MonthlyStatementValidationContractTest.java
+- [X] T065 [P] [US3] Add integration test for statement month-boundary attribution in AEST in backend/src/test/java/com/example/banking/statement/integration/MonthlyStatementTimezoneIntegrationTest.java
 
 ### Implementation for User Story 3
 
@@ -156,9 +156,9 @@
 
 ### Tests for User Story 4
 
-- [ ] T075 [P] [US4] Add contract tests for spending insights success and low-data responses in backend/src/test/java/com/example/banking/insights/contract/SpendingInsightsContractTest.java
-- [ ] T076 [P] [US4] Add contract tests for invalid filter windows in backend/src/test/java/com/example/banking/insights/contract/SpendingInsightsValidationContractTest.java
-- [ ] T077 [P] [US4] Add integration test for comparison delta calculation and insufficiency behavior in backend/src/test/java/com/example/banking/insights/integration/SpendingInsightsIntegrationTest.java
+- [X] T075 [P] [US4] Add contract tests for spending insights success and low-data responses in backend/src/test/java/com/example/banking/insights/contract/SpendingInsightsContractTest.java
+- [X] T076 [P] [US4] Add contract tests for invalid filter windows in backend/src/test/java/com/example/banking/insights/contract/SpendingInsightsValidationContractTest.java
+- [X] T077 [P] [US4] Add integration test for comparison delta calculation and insufficiency behavior in backend/src/test/java/com/example/banking/insights/integration/SpendingInsightsIntegrationTest.java
 
 ### Implementation for User Story 4
 

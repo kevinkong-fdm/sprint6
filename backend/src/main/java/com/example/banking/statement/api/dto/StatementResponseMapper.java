@@ -18,31 +18,48 @@ public class StatementResponseMapper {
             List<StatementLineItemEntity> lineItems,
             String correlationId
     ) {
-        List<StatementLineItemResponse> mappedItems = new ArrayList<>();
-        for (StatementLineItemEntity item : lineItems) {
-            mappedItems.add(new StatementLineItemResponse(
-                    item.getTransactionId(),
-                    item.getPostedAt(),
-                    item.getEntryType().name(),
-                    asMoney(item.getAmount()),
-                    asMoney(item.getBalanceAfter()),
-                    item.getDescription()));
-        }
-
         return new MonthlyStatementSingleResponse(
                 correlationId,
                 Instant.now(),
-                new MonthlyStatementResponse(
-                        statement.getAccountId(),
-                        statement.getCustomerId(),
-                        statement.getStatementMonth(),
-                        statement.getTimezoneCode(),
-                        asMoney(statement.getOpeningBalance()),
-                        asMoney(statement.getClosingBalance()),
-                        asMoney(statement.getTotalDebits()),
-                        asMoney(statement.getTotalCredits()),
-                        mappedItems,
-                        statement.getGeneratedAt()));
+            toMonthlyStatement(statement, lineItems));
+        }
+
+        public MonthlyStatementListResponse toListResponse(
+            List<MonthlyStatementResponse> statements,
+            String correlationId
+        ) {
+        return new MonthlyStatementListResponse(
+            correlationId,
+            Instant.now(),
+            statements);
+        }
+
+        public MonthlyStatementResponse toMonthlyStatement(
+            MonthlyStatementEntity statement,
+            List<StatementLineItemEntity> lineItems
+        ) {
+        List<StatementLineItemResponse> mappedItems = new ArrayList<>();
+        for (StatementLineItemEntity item : lineItems) {
+            mappedItems.add(new StatementLineItemResponse(
+                item.getTransactionId(),
+                item.getPostedAt(),
+                item.getEntryType().name(),
+                asMoney(item.getAmount()),
+                asMoney(item.getBalanceAfter()),
+                item.getDescription()));
+        }
+
+        return new MonthlyStatementResponse(
+            statement.getAccountId(),
+            statement.getCustomerId(),
+            statement.getStatementMonth(),
+            statement.getTimezoneCode(),
+            asMoney(statement.getOpeningBalance()),
+            asMoney(statement.getClosingBalance()),
+            asMoney(statement.getTotalDebits()),
+            asMoney(statement.getTotalCredits()),
+            mappedItems,
+            statement.getGeneratedAt());
     }
 
     public List<StatementLineItemEntity> toLineItemEntities(

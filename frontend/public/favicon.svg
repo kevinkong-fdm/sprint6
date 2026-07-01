@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="Banking App favicon">
+  <defs>
+    <linearGradient id="accent" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06b6d4" />
+      <stop offset="1" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="#020617" />
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="url(#accent)" opacity="0.2" />
+  <path d="M32 12L52 22V26H12V22L32 12Z" fill="#67e8f9" />
+  <rect x="14" y="28" width="6" height="18" rx="2" fill="#f8fafc" />
+  <rect x="24" y="28" width="6" height="18" rx="2" fill="#f8fafc" />
+  <rect x="34" y="28" width="6" height="18" rx="2" fill="#f8fafc" />
+  <rect x="44" y="28" width="6" height="18" rx="2" fill="#f8fafc" />
+  <rect x="11" y="48" width="42" height="5" rx="2.5" fill="#e2e8f0" />
+  <circle cx="32" cy="21" r="2.5" fill="#0f172a" />
+</svg>

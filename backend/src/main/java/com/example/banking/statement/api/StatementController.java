@@ -1,9 +1,11 @@
 package com.example.banking.statement.api;
 
 import com.example.banking.statement.api.dto.GenerateMonthlyStatementRequest;
+import com.example.banking.statement.api.dto.MonthlyStatementListResponse;
 import com.example.banking.statement.api.dto.MonthlyStatementSingleResponse;
 import com.example.banking.statement.application.GenerateMonthlyStatementService;
 import com.example.banking.statement.application.GetMonthlyStatementService;
+import com.example.banking.statement.application.ListMonthlyStatementsService;
 import com.example.banking.standingorder.application.StandingOrderAuthorizationService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -22,15 +24,18 @@ public class StatementController {
     private final StandingOrderAuthorizationService standingOrderAuthorizationService;
     private final GenerateMonthlyStatementService generateMonthlyStatementService;
     private final GetMonthlyStatementService getMonthlyStatementService;
+    private final ListMonthlyStatementsService listMonthlyStatementsService;
 
     public StatementController(
             StandingOrderAuthorizationService standingOrderAuthorizationService,
             GenerateMonthlyStatementService generateMonthlyStatementService,
-            GetMonthlyStatementService getMonthlyStatementService
+            GetMonthlyStatementService getMonthlyStatementService,
+            ListMonthlyStatementsService listMonthlyStatementsService
     ) {
         this.standingOrderAuthorizationService = standingOrderAuthorizationService;
         this.generateMonthlyStatementService = generateMonthlyStatementService;
         this.getMonthlyStatementService = getMonthlyStatementService;
+        this.listMonthlyStatementsService = listMonthlyStatementsService;
     }
 
     @PostMapping("/generate")
@@ -54,5 +59,16 @@ public class StatementController {
         String actorId = standingOrderAuthorizationService.requireActorId(authentication == null ? null : authentication.getName());
         String correlationId = (String) servletRequest.getAttribute("correlationId");
         return getMonthlyStatementService.get(accountId, month, actorId, correlationId);
+    }
+
+    @GetMapping("/history")
+    public MonthlyStatementListResponse history(
+            @RequestParam String accountId,
+            HttpServletRequest servletRequest,
+            Authentication authentication
+    ) {
+        String actorId = standingOrderAuthorizationService.requireActorId(authentication == null ? null : authentication.getName());
+        String correlationId = (String) servletRequest.getAttribute("correlationId");
+        return listMonthlyStatementsService.list(accountId, actorId, correlationId);
     }
 }

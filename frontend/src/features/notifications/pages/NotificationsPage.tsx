@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useAuthSession } from "../../auth/session/AuthSessionContext";
+import { listAccounts } from "../../account/api/accounts";
+import { StandingOrder, listStandingOrders } from "../../standing-orders/api/standingOrders";
 import {
   NotificationDispatchStatus,
   NotificationEvent,
@@ -29,6 +31,8 @@ export function NotificationsPage() {
 
   const [notifications, setNotifications] = useState<NotificationEvent[]>([]);
   const [total, setTotal] = useState(0);
+  const [accountNamesById, setAccountNamesById] = useState<Record<string, string>>({});
+  const [standingOrdersById, setStandingOrdersById] = useState<Record<string, StandingOrder>>({});
 
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -40,6 +44,16 @@ export function NotificationsPage() {
       return;
     }
     void loadNotifications();
+  }, [hasAccessToken]);
+
+  useEffect(() => {
+    if (!hasAccessToken) {
+      setAccountNamesById({});
+      setStandingOrdersById({});
+      return;
+    }
+
+    void loadReferenceData();
   }, [hasAccessToken]);
 
   async function loadNotifications(event?: FormEvent) {
@@ -82,6 +96,43 @@ export function NotificationsPage() {
 
     if (isSessionRecoveryRequired(mapped.code)) {
       signOut();
+    }
+  }
+
+  async function loadReferenceData() {
+    if (!hasAccessToken) {
+      return;
+    }
+
+    try {
+      const [accountsResponse, standingOrdersResponse] = await Promise.all([
+        listAccounts(accessToken, {
+          page: 1,
+          size: 200,
+        }),
+        listStandingOrders(accessToken, {
+          page: 1,
+          size: 200,
+        }),
+      ]);
+
+      const accountMap = accountsResponse.items.reduce<Record<string, string>>((acc, account) => {
+        const normalizedName = (account.nickname ?? "").trim();
+        if (normalizedName) {
+          acc[account.accountId] = normalizedName;
+        }
+        return acc;
+      }, {});
+
+      const standingOrderMap = standingOrdersResponse.items.reduce<Record<string, StandingOrder>>((acc, order) => {
+        acc[order.standingOrderId] = order;
+        return acc;
+      }, {});
+
+      setAccountNamesById(accountMap);
+      setStandingOrdersById(standingOrderMap);
+    } catch {
+      // Keep notification feed usable even if metadata lookups are unavailable.
     }
   }
 
@@ -175,7 +226,9 @@ export function NotificationsPage() {
                     </td>
                     <td className="px-3 py-2">{notification.dispatchStatus}</td>
                     <td className="px-3 py-2">{formatTimestamp(notification.createdAt)}</td>
-                    <td className="px-3 py-2 text-slate-300">{notification.message}</td>
+                    <td className="px-3 py-2 text-slate-300">
+                      {formatNotificationMessage(notification, standingOrdersById, accountNamesById)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -234,4 +287,56 @@ function formatReference(prefix: string, rawValue?: string): string {
   }
 
   return `${prefix}-${normalized.slice(0, 4)}-${normalized.slice(-4)}`;
+}
+
+function formatNotificationMessage(
+  notification: NotificationEvent,
+  standingOrdersById: Record<string, StandingOrder>,
+  accountNamesById: Record<string, string>,
+): string {
+  const fallback = (notification.message ?? "").trim();
+  if (!fallback) {
+    return "-";
+  }
+
+  const standingOrderId = notification.standingOrderId?.trim();
+  if (!standingOrderId) {
+    return fallback;
+  }
+
+  const standingOrderAlias = formatReference("SO", standingOrderId);
+  let normalizedMessage = fallback
+    .replace(new RegExp(`standing order\\s+${escapeRegExp(standingOrderId)}`, "gi"), `Standing order ${standingOrderAlias}`)
+    .split(standingOrderId)
+    .join(standingOrderAlias);
+
+  normalizedMessage = normalizedMessage.replace(/\bstanding order\b/gi, "Standing order");
+
+  const order = standingOrdersById[standingOrderId];
+  if (!order) {
+    return normalizedMessage;
+  }
+
+  const sourceAccountLabel = resolveAccountLabel(order.sourceAccountId, accountNamesById);
+  const destinationAccountLabel = resolveAccountLabel(order.destinationAccountId, accountNamesById);
+
+  normalizedMessage = normalizedMessage.replace(
+    /\([^()]*\s->\s[^()]*\)/,
+    `(${sourceAccountLabel} -> ${destinationAccountLabel})`,
+  );
+
+  return normalizedMessage;
+}
+
+function resolveAccountLabel(accountId: string, accountNamesById: Record<string, string>): string {
+  const mappedName = (accountNamesById[accountId] ?? "").trim();
+  if (mappedName) {
+    return mappedName;
+  }
+
+  return formatReference("ACCT", accountId);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

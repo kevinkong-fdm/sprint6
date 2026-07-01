@@ -61,6 +61,7 @@ export function AccountsPage() {
 
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [copiedAccountId, setCopiedAccountId] = useState<string | null>(null);
 
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -105,6 +106,20 @@ export function AccountsPage() {
 
     setTransferSourceAccountId((current) => (current.trim() ? current : selectedAccount.accountId));
   }, [selectedAccount]);
+
+  useEffect(() => {
+    if (!copiedAccountId) {
+      return;
+    }
+
+    const resetTimer = window.setTimeout(() => {
+      setCopiedAccountId(null);
+    }, 1400);
+
+    return () => {
+      window.clearTimeout(resetTimer);
+    };
+  }, [copiedAccountId]);
 
   async function loadAccounts() {
     if (!hasAccessToken) {
@@ -466,6 +481,7 @@ export function AccountsPage() {
   async function handleCopyAccountId(accountId: string) {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
       setError("Clipboard is not available. Please copy the account ID manually.");
+      setCopiedAccountId(null);
       return;
     }
 
@@ -473,8 +489,10 @@ export function AccountsPage() {
       await navigator.clipboard.writeText(accountId);
       setStatus(`Copied account ID ${accountId}.`);
       setError("");
+      setCopiedAccountId(accountId);
     } catch {
       setError("Unable to copy account ID. Please try again.");
+      setCopiedAccountId(null);
     }
   }
 
@@ -584,9 +602,14 @@ export function AccountsPage() {
                       onClick={() => {
                         void handleCopyAccountId(account.accountId);
                       }}
-                      className="shrink-0 rounded-full bg-white/10 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/20"
+                      className={[
+                        "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                        copiedAccountId === account.accountId
+                          ? "bg-emerald-300 text-slate-950"
+                          : "bg-white/10 text-white hover:bg-white/20",
+                      ].join(" ")}
                     >
-                      Copy ID
+                      {copiedAccountId === account.accountId ? "Copied" : "Copy ID"}
                     </button>
                   </div>
                   <button
