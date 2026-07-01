@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { PaymentActivityPopups } from "../features/account/components/PaymentActivityPopups";
 import { useAuthSession } from "../features/auth/session/AuthSessionContext";
 
 export function AppShell() {
@@ -10,7 +11,6 @@ export function AppShell() {
     "/accounts",
     "/customers",
     "/standing-orders",
-    "/notifications",
     "/statements",
     "/insights",
   ].includes(location.pathname);
@@ -22,7 +22,6 @@ export function AppShell() {
       items.push({ to: "/accounts", label: "Accounts" });
       items.push({ to: "/customers", label: "Customers" });
       items.push({ to: "/standing-orders", label: "Standing orders" });
-      items.push({ to: "/notifications", label: "Notifications" });
       items.push({ to: "/statements", label: "Statements" });
       items.push({ to: "/insights", label: "Insights" });
     } else {
@@ -38,6 +37,8 @@ export function AppShell() {
 
   return (
     <div className="relative min-h-screen overflow-x-hidden">
+      <PaymentActivityPopups />
+
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         <div className="absolute -left-36 top-16 h-72 w-72 rounded-full bg-cyan-300/20 blur-3xl" />
         <div className="absolute right-0 top-0 h-96 w-96 rounded-full bg-emerald-300/10 blur-3xl" />

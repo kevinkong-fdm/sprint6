@@ -46,12 +46,6 @@ export function HomePage() {
           cta: "Open standing orders",
         },
         {
-          title: "Notifications",
-          description: "Inspect standing-order lifecycle and execution notifications with event and dispatch status filtering.",
-          to: "/notifications",
-          cta: "Open notifications",
-        },
-        {
           title: "Statements",
           description: "Generate or retrieve monthly statements with deterministic totals, line items, and no-activity month behavior.",
           to: "/statements",
