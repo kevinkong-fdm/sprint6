@@ -11,6 +11,7 @@ import com.example.banking.auth.api.GlobalExceptionHandler;
 import com.example.banking.auth.api.dto.AuthTokenResponse;
 import com.example.banking.auth.application.DomainException;
 import com.example.banking.auth.application.LoginService;
+import com.example.banking.auth.config.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,8 +19,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+@ContextConfiguration(classes = com.example.banking.TestBootApplication.class)
 @WebMvcTest(controllers = AuthLoginController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, AuthLoginController.class})
@@ -27,6 +30,9 @@ class LoginContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
     private LoginService loginService;

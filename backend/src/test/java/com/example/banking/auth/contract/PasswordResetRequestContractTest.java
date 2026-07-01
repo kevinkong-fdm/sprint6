@@ -11,6 +11,7 @@ import com.example.banking.auth.api.PasswordResetController;
 import com.example.banking.auth.api.dto.AcceptedResponse;
 import com.example.banking.auth.application.DomainException;
 import com.example.banking.auth.application.PasswordResetRequestService;
+import com.example.banking.auth.config.JwtAuthenticationFilter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -18,8 +19,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+@ContextConfiguration(classes = com.example.banking.TestBootApplication.class)
 @WebMvcTest(controllers = PasswordResetController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, PasswordResetController.class})
@@ -27,6 +30,9 @@ class PasswordResetRequestContractTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
     private PasswordResetRequestService passwordResetRequestService;

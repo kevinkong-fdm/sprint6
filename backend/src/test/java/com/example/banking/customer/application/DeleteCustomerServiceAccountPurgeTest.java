@@ -2,6 +2,7 @@ package com.example.banking.customer.application;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
@@ -59,9 +60,9 @@ class DeleteCustomerServiceAccountPurgeTest {
 
         deleteCustomerService.delete(customerId, "corr-1", "actor-1");
 
-                InOrder inOrder = inOrder(deleteAccountService, customerLifecycleEventService);
+        InOrder inOrder = inOrder(deleteAccountService, customerLifecycleEventService);
         inOrder.verify(deleteAccountService).deleteAccountWithAuthData(customerId, CustomerEmailNormalizer.normalize(email));
-        inOrder.verify(customerLifecycleEventService).recordSuccess(customerId, any(), any(), any(), any());
+        inOrder.verify(customerLifecycleEventService).recordSuccess(eq(customerId), any(), any(), any(), any());
     }
 
     @Test
@@ -87,6 +88,6 @@ class DeleteCustomerServiceAccountPurgeTest {
         assertThrows(CustomerDomainException.CascadeDeleteFailureException.class,
                 () -> deleteCustomerService.delete(customerId, "corr-1", "actor-1"));
 
-        verify(customerLifecycleEventService).recordFailure(customerId, any(), any(), any(), any(), any());
+        verify(customerLifecycleEventService).recordFailure(eq(customerId), any(), any(), any(), any(), any());
     }
 }

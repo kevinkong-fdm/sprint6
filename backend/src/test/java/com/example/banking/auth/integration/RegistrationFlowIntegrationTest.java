@@ -11,6 +11,7 @@ import com.example.banking.auth.api.GlobalExceptionHandler;
 import com.example.banking.auth.api.dto.RegisterResponse;
 import com.example.banking.auth.application.DomainException;
 import com.example.banking.auth.application.RegistrationService;
+import com.example.banking.auth.config.JwtAuthenticationFilter;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,8 +20,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
+@ContextConfiguration(classes = com.example.banking.TestBootApplication.class)
 @WebMvcTest(controllers = AuthRegistrationController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Import({GlobalExceptionHandler.class, AuthRegistrationController.class})
@@ -28,6 +31,9 @@ class RegistrationFlowIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @MockBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockBean
     private RegistrationService registrationService;
