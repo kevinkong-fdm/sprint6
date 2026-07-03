@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { useAuthSession } from "../../auth/session/AuthSessionContext";
 import {
   AccountResponse,
@@ -28,6 +28,15 @@ const historyTypeOptions: MovementType[] = [
   "CLOSEOUT_DEBIT",
   "CLOSEOUT_CREDIT",
 ];
+
+type AccountModalAction =
+  | "create"
+  | "rename"
+  | "deposit"
+  | "withdraw"
+  | "transfer"
+  | "history"
+  | "delete";
 
 export function AccountsPage() {
   const { session, signOut } = useAuthSession();
@@ -62,6 +71,7 @@ export function AccountsPage() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [copiedAccountId, setCopiedAccountId] = useState<string | null>(null);
+  const [activeModal, setActiveModal] = useState<AccountModalAction | null>(null);
 
   const [isLoadingAccounts, setIsLoadingAccounts] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -97,7 +107,7 @@ export function AccountsPage() {
     }
 
     void loadAccounts();
-  }, [hasAccessToken]);
+  }, [hasAccessToken, accountTypeFilter]);
 
   useEffect(() => {
     if (!selectedAccount) {
@@ -120,6 +130,27 @@ export function AccountsPage() {
       window.clearTimeout(resetTimer);
     };
   }, [copiedAccountId]);
+
+  useEffect(() => {
+    if (!activeModal) {
+      return;
+    }
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setActiveModal(null);
+      }
+    };
+
+    window.addEventListener("keydown", onEscape);
+    const priorOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.removeEventListener("keydown", onEscape);
+      document.body.style.overflow = priorOverflow;
+    };
+  }, [activeModal]);
 
   async function loadAccounts() {
     if (!hasAccessToken) {
@@ -244,6 +275,7 @@ export function AccountsPage() {
       setStatus(`Created ${created.accountType.toLowerCase()} account ${created.accountId}.`);
       setCreateNickname("");
       setSelectedAccountId(created.accountId);
+      setActiveModal(null);
       await loadAccounts();
       await loadAccountDetail(created.accountId);
     } catch (err) {
@@ -288,6 +320,7 @@ export function AccountsPage() {
       setSelectedAccount(updated);
       setUpdateNickname(updated.nickname ?? "");
       setStatus(`Updated account ${updated.accountId}.`);
+      setActiveModal(null);
       await loadAccounts();
     } catch (err) {
       handleAccountError(err);
@@ -322,6 +355,7 @@ export function AccountsPage() {
       setSelectedAccountId("");
       setUpdateNickname("");
       setHistory(null);
+      setActiveModal(null);
       await loadAccounts();
     } catch (err) {
       handleAccountError(err);
@@ -359,6 +393,7 @@ export function AccountsPage() {
       });
       setStatus(`Posted deposit ${movement.movementId}.`);
       setDepositAmount("");
+      setActiveModal(null);
       await refreshAfterBalanceOperation(selectedAccount.accountId);
     } catch (err) {
       handleAccountError(err);
@@ -396,6 +431,7 @@ export function AccountsPage() {
       });
       setStatus(`Posted withdrawal ${movement.movementId}.`);
       setWithdrawAmount("");
+      setActiveModal(null);
       await refreshAfterBalanceOperation(selectedAccount.accountId);
     } catch (err) {
       handleAccountError(err);
@@ -444,6 +480,9 @@ export function AccountsPage() {
 
       setStatus(`Posted transfer ${transfer.transferId}.`);
       setTransferAmount("");
+      setTransferDestinationAccountId("");
+      setActiveModal(null);
+      setTransferSourceAccountId(sourceAccountId);
       await loadAccounts();
 
       if (selectedAccountId.trim() === sourceAccountId || selectedAccountId.trim() === destinationAccountId) {
@@ -467,6 +506,7 @@ export function AccountsPage() {
     }
 
     await loadHistory(selectedAccount.accountId);
+    setActiveModal(null);
   }
 
   function handleAccountError(err: unknown) {
@@ -496,14 +536,59 @@ export function AccountsPage() {
     }
   }
 
+  function openModal(action: AccountModalAction) {
+    setStatus("");
+    setError("");
+    setActiveModal(action);
+  }
+
+  function closeModal() {
+    setActiveModal(null);
+  }
+
   return (
     <section className="space-y-6">
       <header className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-6 shadow-soft backdrop-blur-xl">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-200/80">Accounts</p>
         <h2 className="mt-2 text-3xl font-semibold text-white">Account operations</h2>
         <p className="mt-2 text-sm leading-6 text-slate-300">
-          Open, maintain, and transact on authenticated accounts. Balances, transfers, and transaction history stay in one workspace.
+          Run account updates, cash movements and transfers.
         </p>
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => openModal("create")}
+            disabled={!hasAccessToken || isBusy}
+            className="inline-flex items-center justify-center rounded-full bg-cyan-300 px-4 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+          >
+            Open account
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void loadAccounts();
+            }}
+            disabled={!hasAccessToken || isBusy}
+            className="inline-flex items-center justify-center rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoadingAccounts ? "Refreshing..." : "Refresh accounts"}
+          </button>
+          <select
+            aria-label="Filter account type"
+            value={accountTypeFilter}
+            onChange={(event) => setAccountTypeFilter(event.target.value as "" | AccountType)}
+            className="rounded-full border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-cyan-300 focus:outline-none"
+          >
+            <option value="">All account types</option>
+            {accountTypeOptions.map((accountType) => (
+              <option key={accountType} value={accountType}>
+                {accountType}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {!hasAccessToken ? (
           <p className="mt-4 rounded-xl border border-amber-300/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
             Session token is missing. Sign out and sign in again before running account operations.
@@ -511,72 +596,33 @@ export function AccountsPage() {
         ) : null}
       </header>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid gap-6 xl:grid-cols-[1.1fr_1.6fr]">
         <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Create account</h3>
-          <p className="mt-2 text-sm text-slate-300">Open a new checking or savings account with a required account name.</p>
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold text-white">Accounts</h3>
+            <p className="rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200">
+              {accounts.length} loaded
+            </p>
+          </div>
 
-          <form onSubmit={handleCreateAccount} className="mt-4 grid gap-3 sm:grid-cols-2">
-            <select
-              aria-label="Create account type"
-              value={createAccountType}
-              onChange={(event) => setCreateAccountType(event.target.value as AccountType)}
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            >
-              {accountTypeOptions.map((accountType) => (
-                <option key={accountType} value={accountType}>
-                  {accountType}
-                </option>
-              ))}
-            </select>
+          <form onSubmit={handleLoadAccount} className="mt-4 flex flex-col gap-3 sm:flex-row">
             <input
-              aria-label="Create account name"
+              aria-label="Load account id"
               type="text"
               required
-              value={createNickname}
-              onChange={(event) => setCreateNickname(event.target.value)}
-              placeholder="Account name"
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              value={selectedAccountId}
+              onChange={(event) => setSelectedAccountId(event.target.value)}
+              placeholder="Paste account ID to jump"
+              className="min-w-0 flex-1 rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
             />
             <button
               type="submit"
-              disabled={!hasAccessToken || isBusy}
-              className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+              disabled={!hasAccessToken || isBusy || !selectedAccountId.trim()}
+              className="inline-flex shrink-0 items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {isCreating ? "Creating..." : "Create account"}
+              {isLoadingAccount ? "Loading..." : "Load"}
             </button>
           </form>
-        </article>
-
-        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Account listing</h3>
-          <p className="mt-2 text-sm text-slate-300">Filter and load existing accounts independently from account creation.</p>
-
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <select
-              aria-label="Filter account type"
-              value={accountTypeFilter}
-              onChange={(event) => setAccountTypeFilter(event.target.value as "" | AccountType)}
-              className="rounded-full border border-white/20 bg-slate-950/70 px-3 py-2 text-xs font-semibold text-slate-100 focus:border-cyan-300 focus:outline-none"
-            >
-              <option value="">All account types</option>
-              {accountTypeOptions.map((accountType) => (
-                <option key={accountType} value={accountType}>
-                  {accountType}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => {
-                void loadAccounts();
-              }}
-              disabled={!hasAccessToken || isBusy}
-              className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isLoadingAccounts ? "Refreshing..." : "Refresh list"}
-            </button>
-          </div>
 
           <div className="mt-4 space-y-2">
             {accounts.length === 0 ? (
@@ -584,74 +630,91 @@ export function AccountsPage() {
                 No accounts loaded yet.
               </p>
             ) : (
-              accounts.map((account) => (
-                <article
-                  key={account.accountId}
-                  className="rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 transition hover:border-cyan-300/40 hover:bg-slate-900/70"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-[0.14em] text-slate-400">{account.accountType}</p>
-                      <p className="mt-1 break-all text-sm font-semibold text-white">{account.accountId}</p>
-                      <p className="mt-1 text-xs text-slate-300">
-                        {account.nickname || "Unnamed account"} • {account.currencyCode} {formatMoney(account.availableBalance)}
-                      </p>
+              accounts.map((account) => {
+                const isSelected = selectedAccount?.accountId === account.accountId;
+
+                return (
+                  <article
+                    key={account.accountId}
+                    className={[
+                      "rounded-xl border px-4 py-3 transition",
+                      isSelected
+                        ? "border-cyan-300/50 bg-cyan-400/10"
+                        : "border-white/10 bg-slate-950/50 hover:border-cyan-300/40 hover:bg-slate-900/70",
+                    ].join(" ")}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs uppercase tracking-[0.14em] text-slate-400">{account.accountType}</p>
+                        <p className="mt-1 break-all text-sm font-semibold text-white">{account.accountId}</p>
+                        <p className="mt-1 text-xs text-slate-300">
+                          {account.nickname || "Unnamed account"} | {account.currencyCode} {formatMoney(account.availableBalance)}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleCopyAccountId(account.accountId);
+                        }}
+                        className={[
+                          "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                          copiedAccountId === account.accountId
+                            ? "bg-emerald-300 text-slate-950"
+                            : "bg-white/10 text-white hover:bg-white/20",
+                        ].join(" ")}
+                      >
+                        {copiedAccountId === account.accountId ? "Copied" : "Copy ID"}
+                      </button>
                     </div>
+
                     <button
                       type="button"
                       onClick={() => {
-                        void handleCopyAccountId(account.accountId);
+                        void loadAccountDetail(account.accountId);
                       }}
-                      className={[
-                        "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition",
-                        copiedAccountId === account.accountId
-                          ? "bg-emerald-300 text-slate-950"
-                          : "bg-white/10 text-white hover:bg-white/20",
-                      ].join(" ")}
+                      className="mt-3 inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200"
                     >
-                      {copiedAccountId === account.accountId ? "Copied" : "Copy ID"}
+                      {isSelected ? "Loaded" : "Load account"}
                     </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void loadAccountDetail(account.accountId);
-                    }}
-                    className="mt-3 inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200"
-                  >
-                    Load account
-                  </button>
-                </article>
-              ))
+                  </article>
+                );
+              })
             )}
           </div>
         </article>
 
         <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Selected account</h3>
-
-          <form onSubmit={handleLoadAccount} className="mt-4 space-y-3">
-            <input
-              aria-label="Load account id"
-              type="text"
-              required
-              value={selectedAccountId}
-              onChange={(event) => setSelectedAccountId(event.target.value)}
-              placeholder="Account ID"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <button
-              type="submit"
-              disabled={!hasAccessToken || isBusy || !selectedAccountId.trim()}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isLoadingAccount ? "Loading..." : "Load account"}
-            </button>
-          </form>
+          <h3 className="text-xl font-semibold text-white">Current workspace</h3>
 
           {selectedAccount ? (
-            <div className="mt-4 space-y-4">
-              <div className="grid gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-200 sm:grid-cols-2">
+            <>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-slate-950/50 p-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Account management</p>
+                  <p className="mt-1 break-all text-xs text-slate-300">{selectedAccount.accountId}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => openModal("rename")}
+                    disabled={!hasAccessToken || isBusy}
+                    className="inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => openModal("delete")}
+                    disabled={!hasAccessToken || isBusy}
+                    className="inline-flex items-center justify-center rounded-full bg-rose-300 px-3 py-1.5 text-xs font-semibold text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:bg-rose-200/70"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-3 grid gap-3 rounded-xl border border-white/10 bg-slate-950/60 p-4 text-sm text-slate-200 sm:grid-cols-2">
                 <div>
                   <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Account ID</p>
                   <p className="mt-1 break-all font-medium text-white">{selectedAccount.accountId}</p>
@@ -661,207 +724,98 @@ export function AccountsPage() {
                   <p className="mt-1 font-medium text-white">{selectedAccount.accountType}</p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Available balance</p>
-                  <p className="mt-1 font-medium text-white">{selectedAccount.currencyCode} {formatMoney(selectedAccount.availableBalance)}</p>
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Nickname</p>
+                  <p className="mt-1 font-medium text-white">{selectedAccount.nickname || "Unnamed account"}</p>
                 </div>
                 <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Available balance</p>
+                  <p className="mt-1 font-medium text-white">
+                    {selectedAccount.currencyCode} {formatMoney(selectedAccount.availableBalance)}
+                  </p>
+                </div>
+                <div className="sm:col-span-2">
                   <p className="text-xs uppercase tracking-[0.14em] text-slate-400">Ledger balance</p>
-                  <p className="mt-1 font-medium text-white">{selectedAccount.currencyCode} {formatMoney(selectedAccount.ledgerBalance)}</p>
+                  <p className="mt-1 font-medium text-white">
+                    {selectedAccount.currencyCode} {formatMoney(selectedAccount.ledgerBalance)}
+                  </p>
                 </div>
               </div>
 
-              <form onSubmit={handleUpdateAccount} className="space-y-3 border-t border-white/10 pt-4">
-                <input
-                  aria-label="Update account nickname"
-                  type="text"
-                  value={updateNickname}
-                  onChange={(event) => setUpdateNickname(event.target.value)}
-                  placeholder="Nickname"
-                  className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-                />
+              <div className="mt-4 grid gap-2 sm:grid-cols-3">
                 <button
-                  type="submit"
-                  disabled={!hasAccessToken || isBusy || !selectedAccount}
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+                  type="button"
+                  onClick={() => openModal("deposit")}
+                  disabled={!hasAccessToken || isBusy}
+                  className="inline-flex items-center justify-center rounded-xl bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
                 >
-                  {isUpdating ? "Updating..." : "Update nickname"}
+                  Deposit
                 </button>
-              </form>
-
-              <form onSubmit={handleDeleteAccount} className="space-y-3 border-t border-white/10 pt-4">
                 <button
-                  type="submit"
-                  disabled={!hasAccessToken || isBusy || !selectedAccount}
-                  className="inline-flex w-full items-center justify-center rounded-xl bg-rose-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:bg-rose-200/70"
+                  type="button"
+                  onClick={() => openModal("withdraw")}
+                  disabled={!hasAccessToken || isBusy}
+                  className="inline-flex items-center justify-center rounded-xl bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  {isDeleting ? "Deleting..." : "Delete account"}
+                  Withdraw
                 </button>
-                <p className="text-xs text-slate-400">
-                  Account deletion is blocked only when pending movement activity exists.
-                </p>
-              </form>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => openModal("transfer")}
+                  disabled={!hasAccessToken || isBusy}
+                  className="inline-flex items-center justify-center rounded-xl bg-indigo-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-indigo-200 disabled:cursor-not-allowed disabled:bg-indigo-200/70"
+                >
+                  Transfer
+                </button>
+              </div>
+            </>
           ) : (
             <p className="mt-4 rounded-xl border border-white/10 bg-slate-950/50 px-4 py-3 text-sm text-slate-300">
-              Load an account to edit, delete, transact, and view history.
+              Select an account from the directory to unlock quick actions.
             </p>
           )}
         </article>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Movements</h3>
-          <p className="mt-2 text-sm text-slate-300">Run deposits and withdrawals on the currently selected account.</p>
-
-          <form onSubmit={handleDeposit} className="mt-4 space-y-3">
-            <input
-              aria-label="Deposit amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={depositAmount}
-              onChange={(event) => setDepositAmount(event.target.value)}
-              placeholder="Deposit amount"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <button
-              type="submit"
-              disabled={!hasAccessToken || isBusy || !selectedAccount}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
-            >
-              {isDepositing ? "Posting deposit..." : "Deposit"}
-            </button>
-          </form>
-
-          <form onSubmit={handleWithdraw} className="mt-4 space-y-3 border-t border-white/10 pt-4">
-            <input
-              aria-label="Withdraw amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={withdrawAmount}
-              onChange={(event) => setWithdrawAmount(event.target.value)}
-              placeholder="Withdraw amount"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <button
-              type="submit"
-              disabled={!hasAccessToken || isBusy || !selectedAccount}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {isWithdrawing ? "Posting withdrawal..." : "Withdraw"}
-            </button>
-          </form>
-        </article>
-
-        <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-          <h3 className="text-xl font-semibold text-white">Transfers</h3>
-          <p className="mt-2 text-sm text-slate-300">Move funds between two different accounts.</p>
-
-          <form onSubmit={handleTransfer} className="mt-4 space-y-3">
-            <select
-              aria-label="Transfer source account"
-              value={transferSourceAccountId}
-              onChange={(event) => setTransferSourceAccountId(event.target.value)}
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            >
-              <option value="">Select source account</option>
-              {accounts.map((account) => (
-                <option key={account.accountId} value={account.accountId}>
-                  {account.accountType} • {account.accountId}
-                </option>
-              ))}
-            </select>
-            <input
-              aria-label="Transfer destination account"
-              type="text"
-              value={transferDestinationAccountId}
-              onChange={(event) => setTransferDestinationAccountId(event.target.value)}
-              placeholder="Destination account ID"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="Transfer amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={transferAmount}
-              onChange={(event) => setTransferAmount(event.target.value)}
-              placeholder="Transfer amount"
-              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <button
-              type="submit"
-              disabled={!hasAccessToken || isBusy}
-              className="inline-flex w-full items-center justify-center rounded-xl bg-indigo-300 px-4 py-3 text-sm font-semibold text-slate-950 transition hover:bg-indigo-200 disabled:cursor-not-allowed disabled:bg-indigo-200/70"
-            >
-              {isTransferring ? "Posting transfer..." : "Transfer"}
-            </button>
-          </form>
-        </article>
-      </div>
-
       <article className="animate-fade-up rounded-2xl border border-white/15 bg-slate-900/60 p-5 shadow-soft backdrop-blur-xl">
-        <h3 className="text-xl font-semibold text-white">Transaction history</h3>
-
-        <form onSubmit={handleLoadHistory} className="mt-4 grid gap-3 sm:grid-cols-2">
-          <input
-            aria-label="History from timestamp"
-            type="datetime-local"
-            value={historyFrom}
-            onChange={(event) => setHistoryFrom(event.target.value)}
-            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-          />
-          <input
-            aria-label="History to timestamp"
-            type="datetime-local"
-            value={historyTo}
-            onChange={(event) => setHistoryTo(event.target.value)}
-            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-          />
-          <select
-            aria-label="History movement type"
-            value={historyType}
-            onChange={(event) => setHistoryType(event.target.value as "" | MovementType)}
-            className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-          >
-            <option value="">All movement types</option>
-            {historyTypeOptions.map((movementType) => (
-              <option key={movementType} value={movementType}>
-                {movementType}
-              </option>
-            ))}
-          </select>
-          <div className="grid grid-cols-2 gap-3">
-            <input
-              aria-label="History page"
-              type="number"
-              min="1"
-              value={historyPage}
-              onChange={(event) => setHistoryPage(event.target.value)}
-              placeholder="Page"
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
-            <input
-              aria-label="History page size"
-              type="number"
-              min="1"
-              max="200"
-              value={historySize}
-              onChange={(event) => setHistorySize(event.target.value)}
-              placeholder="Size"
-              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
-            />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-semibold text-white">Transaction history</h3>
+            <p className="mt-1 text-sm text-slate-300">
+              {selectedAccount
+                ? `Showing activity for ${selectedAccount.accountId}`
+                : "Choose an account to load history"}
+            </p>
           </div>
-          <button
-            type="submit"
-            disabled={!hasAccessToken || isBusy || !selectedAccount}
-            className="sm:col-span-2 inline-flex w-full items-center justify-center rounded-xl bg-white/10 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isLoadingHistory ? "Loading history..." : "Load history"}
-          </button>
-        </form>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (!selectedAccount) {
+                  return;
+                }
+                void loadHistory(selectedAccount.accountId);
+              }}
+              disabled={!hasAccessToken || isBusy || !selectedAccount}
+              className="inline-flex items-center justify-center rounded-full bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {isLoadingHistory ? "Loading..." : "Reload history"}
+            </button>
+            <button
+              type="button"
+              onClick={() => openModal("history")}
+              disabled={!hasAccessToken || isBusy || !selectedAccount}
+              className="inline-flex items-center justify-center rounded-full bg-cyan-300 px-3 py-2 text-xs font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+            >
+              Adjust filters
+            </button>
+          </div>
+        </div>
+
+        {history ? (
+          <p className="mt-3 text-xs text-slate-400">
+            Page {history.page} | Size {history.size} | Total items {history.total}
+          </p>
+        ) : null}
 
         {history && history.items.length > 0 ? (
           <div className="mt-4 overflow-x-auto rounded-xl border border-white/10 bg-slate-950/60">
@@ -911,13 +865,331 @@ export function AccountsPage() {
           <pre className="mt-3 overflow-x-auto text-xs leading-6 text-slate-200">{prettySelectedAccount}</pre>
         </details>
       ) : null}
+
+      {activeModal === "create" ? (
+        <ModalShell title="Open account" subtitle="Create a checking or savings account without leaving this page." onClose={closeModal}>
+          <form onSubmit={handleCreateAccount} className="space-y-3">
+            <select
+              aria-label="Create account type"
+              value={createAccountType}
+              onChange={(event) => setCreateAccountType(event.target.value as AccountType)}
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            >
+              {accountTypeOptions.map((accountType) => (
+                <option key={accountType} value={accountType}>
+                  {accountType}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Create account name"
+              type="text"
+              required
+              value={createNickname}
+              onChange={(event) => setCreateNickname(event.target.value)}
+              placeholder="Account name"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy}
+                className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+              >
+                {isCreating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "rename" ? (
+        <ModalShell title="Rename account" subtitle="Update the account nickname used in your directory view." onClose={closeModal}>
+          <form onSubmit={handleUpdateAccount} className="space-y-3">
+            <input
+              aria-label="Update account nickname"
+              type="text"
+              value={updateNickname}
+              onChange={(event) => setUpdateNickname(event.target.value)}
+              placeholder="Nickname"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy || !selectedAccount}
+                className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+              >
+                {isUpdating ? "Updating..." : "Save"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "deposit" ? (
+        <ModalShell title="Deposit funds" subtitle="Post a credit movement to the selected account." onClose={closeModal}>
+          <form onSubmit={handleDeposit} className="space-y-3">
+            <input
+              aria-label="Deposit amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={depositAmount}
+              onChange={(event) => setDepositAmount(event.target.value)}
+              placeholder="Deposit amount"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy || !selectedAccount}
+                className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+              >
+                {isDepositing ? "Posting..." : "Deposit"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "withdraw" ? (
+        <ModalShell title="Withdraw funds" subtitle="Post a debit movement from the selected account." onClose={closeModal}>
+          <form onSubmit={handleWithdraw} className="space-y-3">
+            <input
+              aria-label="Withdraw amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={withdrawAmount}
+              onChange={(event) => setWithdrawAmount(event.target.value)}
+              placeholder="Withdraw amount"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy || !selectedAccount}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isWithdrawing ? "Posting..." : "Withdraw"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "transfer" ? (
+        <ModalShell title="Transfer funds" subtitle="Move money between two different accounts in one flow." onClose={closeModal}>
+          <form onSubmit={handleTransfer} className="space-y-3">
+            <select
+              aria-label="Transfer source account"
+              value={transferSourceAccountId}
+              onChange={(event) => setTransferSourceAccountId(event.target.value)}
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            >
+              <option value="">Select source account</option>
+              {accounts.map((account) => (
+                <option key={account.accountId} value={account.accountId}>
+                  {account.accountType} | {account.accountId}
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Transfer destination account"
+              type="text"
+              value={transferDestinationAccountId}
+              onChange={(event) => setTransferDestinationAccountId(event.target.value)}
+              placeholder="Destination account ID"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <input
+              aria-label="Transfer amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={transferAmount}
+              onChange={(event) => setTransferAmount(event.target.value)}
+              placeholder="Transfer amount"
+              className="w-full rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 placeholder:text-slate-400 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy}
+                className="rounded-xl bg-indigo-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-indigo-200 disabled:cursor-not-allowed disabled:bg-indigo-200/70"
+              >
+                {isTransferring ? "Posting..." : "Transfer"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "history" ? (
+        <ModalShell title="History filters" subtitle="Adjust time range, movement type, and paging for activity queries." onClose={closeModal}>
+          <form onSubmit={handleLoadHistory} className="grid gap-3 sm:grid-cols-2">
+            <input
+              aria-label="History from timestamp"
+              type="datetime-local"
+              value={historyFrom}
+              onChange={(event) => setHistoryFrom(event.target.value)}
+              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <input
+              aria-label="History to timestamp"
+              type="datetime-local"
+              value={historyTo}
+              onChange={(event) => setHistoryTo(event.target.value)}
+              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            />
+            <select
+              aria-label="History movement type"
+              value={historyType}
+              onChange={(event) => setHistoryType(event.target.value as "" | MovementType)}
+              className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            >
+              <option value="">All movement types</option>
+              {historyTypeOptions.map((movementType) => (
+                <option key={movementType} value={movementType}>
+                  {movementType}
+                </option>
+              ))}
+            </select>
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                aria-label="History page"
+                type="number"
+                min="1"
+                value={historyPage}
+                onChange={(event) => setHistoryPage(event.target.value)}
+                placeholder="Page"
+                className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+              <input
+                aria-label="History page size"
+                type="number"
+                min="1"
+                max="200"
+                value={historySize}
+                onChange={(event) => setHistorySize(event.target.value)}
+                placeholder="Size"
+                className="rounded-xl border border-white/20 bg-slate-950/70 px-4 py-3 text-sm text-slate-100 focus:border-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+              />
+            </div>
+            <div className="sm:col-span-2 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy || !selectedAccount}
+                className="rounded-xl bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-cyan-200/70"
+              >
+                {isLoadingHistory ? "Loading..." : "Apply and load"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
+
+      {activeModal === "delete" ? (
+        <ModalShell title="Delete account" subtitle="This removes the selected account if no blocking activity exists." onClose={closeModal}>
+          <form onSubmit={handleDeleteAccount} className="space-y-4">
+            <p className="rounded-xl border border-rose-300/30 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+              You are deleting account {selectedAccount?.accountId || ""}. This action cannot be undone.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/20"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!hasAccessToken || isBusy || !selectedAccount}
+                className="rounded-xl bg-rose-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-rose-200 disabled:cursor-not-allowed disabled:bg-rose-200/70"
+              >
+                {isDeleting ? "Deleting..." : "Confirm delete"}
+              </button>
+            </div>
+          </form>
+        </ModalShell>
+      ) : null}
     </section>
   );
 }
 
-function normalizeOptional(value: string): string | undefined {
-  const trimmed = value.trim();
-  return trimmed ? trimmed : undefined;
+type ModalShellProps = {
+  title: string;
+  subtitle: string;
+  onClose: () => void;
+  children: ReactNode;
+};
+
+function ModalShell({ title, subtitle, onClose, children }: ModalShellProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" role="dialog" aria-modal="true">
+      <button
+        type="button"
+        aria-label="Close modal"
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-950/75"
+      />
+
+      <div className="relative z-10 w-full max-w-lg rounded-2xl border border-white/20 bg-slate-900/95 p-5 shadow-soft backdrop-blur-xl sm:p-6">
+        <div className="flex items-start gap-3">
+          <div>
+            <h4 className="text-xl font-semibold text-white">{title}</h4>
+            <p className="mt-1 text-sm text-slate-300">{subtitle}</p>
+          </div>
+        </div>
+
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
 }
 
 function parsePositiveAmount(value: string): number | null {

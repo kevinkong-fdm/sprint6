@@ -91,7 +91,7 @@ class StandingOrderExceptionHandlerTest {
                 request("GET", "/insights/spending", null));
 
         ResponseEntity<FeatureErrorResponse> unhandled =
-                handler.handleUnhandled(new RuntimeException("boom"), request("POST", "/standing-orders", null));
+            handler.handleUnhandled(new NoStackRuntimeException("boom"), request("POST", "/standing-orders", null));
 
         assertEquals(HttpStatus.BAD_REQUEST, integrity.getStatusCode());
         assertEquals("INS-001", integrity.getBody().errorCode());
@@ -115,6 +115,12 @@ class StandingOrderExceptionHandlerTest {
     private static final class UnknownStatusException extends StandingOrderDomainException {
         private UnknownStatusException() {
             super("FEAT-UNK-001", "Unknown status", 999);
+        }
+    }
+
+    private static final class NoStackRuntimeException extends RuntimeException {
+        private NoStackRuntimeException(String message) {
+            super(message, null, false, false);
         }
     }
 }

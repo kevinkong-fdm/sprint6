@@ -18,9 +18,6 @@ export type SpendingInsightsTotals = {
 export type SpendingInsights = {
   periodStart: string;
   periodEnd: string;
-  comparisonMode: "PREVIOUS_PERIOD" | "NONE";
-  insufficientData: boolean;
-  insufficiencyReason: "INSUFFICIENT_HISTORY" | "NONE";
   categories: SpendingInsightsCategory[];
   totals: SpendingInsightsTotals;
 };
@@ -36,14 +33,13 @@ export async function getSpendingInsights(
   options: {
     periodStart: string;
     periodEnd: string;
-    comparisonMode?: "PREVIOUS_PERIOD" | "NONE";
     accountId?: string;
   },
 ) {
   const query = new URLSearchParams({
     periodStart: options.periodStart,
     periodEnd: options.periodEnd,
-    comparisonMode: options.comparisonMode ?? "PREVIOUS_PERIOD",
+    comparisonMode: "PREVIOUS_PERIOD",
   });
 
   if (options.accountId?.trim()) {
